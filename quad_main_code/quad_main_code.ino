@@ -108,31 +108,31 @@ void rc_elevator_change() { rc_channel_change(ELEVATOR); }
 void rc_throttle_change() { rc_channel_change(THROTTLE); }
 void rc_rudder_change()   { rc_channel_change(RUDDER);   }
 
-void rc_setup_interrupts() {
-  PCintPort::attachInterrupt(rc_pins[AILERON],  &rc_aileron_change, CHANGE);
-  PCintPort::attachInterrupt(rc_pins[ELEVATOR], &rc_elevator_change, CHANGE);
-  PCintPort::attachInterrupt(rc_pins[THROTTLE], &rc_throttle_change, CHANGE);
-  PCintPort::attachInterrupt(rc_pins[RUDDER],   &rc_rudder_change, CHANGE);
-}
+//void rc_setup_interrupts() {
+//  PCintPort::attachInterrupt(rc_pins[AILERON],  &rc_aileron_change, CHANGE);
+//  PCintPort::attachInterrupt(rc_pins[ELEVATOR], &rc_elevator_change, CHANGE);
+//  PCintPort::attachInterrupt(rc_pins[THROTTLE], &rc_throttle_change, CHANGE);
+//  PCintPort::attachInterrupt(rc_pins[RUDDER],   &rc_rudder_change, CHANGE);
+//}
 
-void rc_process_channels() {
-  static uint8_t flags;
-  
-  if (rc_shared_flags) {
-    noInterrupts();
-    flags = rc_shared_flags;
-    
-    if (flags & rc_flags[0]) rc_values[0] = rc_shared_values[0];
-    if (flags & rc_flags[1]) rc_values[1] = rc_shared_values[1];
-    if (flags & rc_flags[2]) rc_values[2] = rc_shared_values[2];
-    if (flags & rc_flags[3]) rc_values[3] = rc_shared_values[3];
-    
-    rc_shared_flags = 0;
-    interrupts(); 
-  }
-
-  flags = 0;
-}
+//void rc_process_channels() {
+//  static uint8_t flags;
+//  
+//  if (rc_shared_flags) {
+//    noInterrupts();
+//    flags = rc_shared_flags;
+//    
+//    if (flags & rc_flags[0]) rc_values[0] = rc_shared_values[0];
+//    if (flags & rc_flags[1]) rc_values[1] = rc_shared_values[1];
+//    if (flags & rc_flags[2]) rc_values[2] = rc_shared_values[2];
+//    if (flags & rc_flags[3]) rc_values[3] = rc_shared_values[3];
+//    
+//    rc_shared_flags = 0;
+//    interrupts(); 
+//  }
+//
+//  flags = 0;
+//}
 
 //#ifdef DEBUG_RECEIVER
 //void rc_print_channels() {
@@ -165,7 +165,7 @@ void parseJoyStickInput()
       }
       else if (joystick_bla == ':') {
         FLAG_INPUT_PACKET_END = true;
-        printJoyStickInput();
+//        printJoyStickInput();
         //FLAG_INPUT_PACKET_END = false;
         j_index = 0;
         index1 = 0;
@@ -205,7 +205,7 @@ void parseIMUInput()
       }
       else if (IMU_bla == ':') {
         FLAG_IMU_PACKET_END = true;
-        printIMUReadings();
+//        printIMUReadings();
         //FLAG_IMU_PACKET_END = false;
         q_index = 0;
         index2 = 0;
@@ -246,7 +246,8 @@ void printJoyStickInput()
   Serial.print(command_pitch.val,4);
   Serial.print(' ');
   //Serial.print("Thrust Input: ");
-  Serial.println(command_thrust.val,4);
+  Serial.print(command_thrust.val,4);
+  Serial.print("  ");
   
 }
 
@@ -325,7 +326,7 @@ void setup() {
   
   delay(200);
 
-  rc_setup_interrupts();
+//  rc_setup_interrupts();
 }
 
 void motor() {
@@ -339,14 +340,14 @@ void loop() {
   
   if (Serial3.available() > 0) {                              // Joystick reading available
     parseJoyStickInput();
-//    printJoyStickInput();
   }
   
   if (Serial2.available() > 0) {                              // Xbee reading available
     parseIMUInput();
-//    printIMUReadings();
+
   }
-  
+  printJoyStickInput();
+  printIMUReadings();
 //  analogWrite(2,168);
 //  //loop_start, = millis();
 //  rc_process_channels();

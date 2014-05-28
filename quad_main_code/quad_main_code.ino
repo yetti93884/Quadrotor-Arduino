@@ -2,6 +2,7 @@
 //#include <Timer.h>
 
 #include <Wire.h>
+#include <Servo.h>
 
 //Timer t;
 
@@ -49,7 +50,28 @@ float q_Euler[3] = {0.0,0.0,0.0};
 float_num q0,q1,q2,q3;
 
 ///////////////////////////////////////////////////////////
- 
+
+////////////////Motor Running Variables ///////////////////
+
+#define MOTOR_LEFT_PIN 8
+#define MOTOR_RIGHT_PIN 9
+#define MOTOR_FRONT_PIN 10
+#define MOTOR_BACK_PIN 11
+
+#define MOTOR_PWM_MIN 1000
+#define MOTOR_PWM_MAX 2000
+
+Servo motor_left;
+//Servo motor_right;
+//Servo motor_front;
+//Servo motor_back;
+
+int motor_left_pwm;
+int motor_right_pwm;
+int motor_front_pwm;
+int motor_back_pwm;
+
+/////////////////////////////////////////////////////////// 
 int loop_start;
 
 float angles[3]; // yaw pitch roll
@@ -58,7 +80,8 @@ float rates[6];
 float roll,pitch,rollzero,pitchzero;
 float zhuman;
 float speeds[4];
-float k, d , i, kr, dr , ir;
+float k, d , i, kr, d
+r , ir;
 float pitch_set, roll_set, pitch_set_zero,roll_set_zero , roll_get, pitch_get;
 float ipitch , iroll,  gyroX , gyroY , pitch_in, roll_in, gyroZ ;
 int fly,c, count;
@@ -68,7 +91,17 @@ digitalWrite(pin, HIGH);
 delayMicroseconds(duration);
 digitalWrite(pin, LOW);
 
+}
+
+void updateMotors() {
+  motor_left.writeMicroseconds(motor_left_pwm);
+//    motor_right.writeMicroseconds(motor_right_pwm);
+//    motor_front.writeMicroseconds(motor_front_pwm);
+//    motor_back.writeMicroseconds(motor_back_pwm);
 }  
+void throttleToMotor() {
+  motor_left_pwm = MOTOR_PWM_MIN + (command_pitch.val+1)/2*(MOTOR_PWM_MAX-MOTOR_PWM_MIN);
+}
 
 void parseJoyStickInput()
 {
@@ -163,7 +196,7 @@ void printJoyStickInput()
   Serial.print(' ');
   //Serial.print("Thrust Input: ");
   Serial.print(command_thrust.val,4);
-  Serial.print("  ");
+  Serial.print("  |  ");
   
 }
 
@@ -171,6 +204,18 @@ void quaternionToEuler(float *q, float *euler) {
   euler[0] = atan2(2 * q[1] * q[2] - 2 * q[0] * q[3], 2 * q[0]*q[0] + 2 * q[1] * q[1] - 1); // psi
   euler[1] = -asin(2 * q[1] * q[3] + 2 * q[0] * q[2]); // theta
   euler[2] = atan2(2 * q[2] * q[3] - 2 * q[0] * q[1], 2 * q[0] * q[0] + 2 * q[3] * q[3] - 1); // phi
+}
+
+void printMotorPWM() {
+  Serial.print(" Motor PWM : left- ");
+  Serial.print(motor_left_pwm);
+  Serial.print(" right- ");
+  Serial.print(motor_right_pwm);
+  Serial.print(" front- ");
+  Serial.print(motor_front_pwm);
+  Serial.print(" back- ");
+  Serial.print(motor_back_pwm);  
+  Serial.print("  |  ");
 }
 
 void printIMUReadings()
@@ -191,7 +236,8 @@ void printIMUReadings()
   Serial.print(degrees(q_Euler[1]),4);
   Serial.print(' ');
   Serial.print("Roll: ");
-  Serial.println(degrees(q_Euler[2]),4);
+  Serial.print(degrees(q_Euler[2]),4);
+  Serial.print("  |  ");
 
 //  Serial.print(q0.val,4);
 //  Serial.print(' ');
@@ -231,6 +277,23 @@ void setup() {
     iroll = 0; 
     ipitch = 0;
     
+    
+    /// motor input settings////
+    motor_left.attach(MOTOR_LEFT_PIN);
+//    motor_right.attach(MOTOR_RIGHT_PIN);
+//    motor_front.attach(MOTOR_FRONT_PIN);
+//    motor_back.attach(MOTOR_BACK_PIN);
+
+    motor_left_pwm = MOTOR_PWM_MIN;
+//    motor_right_pwm = MOTOR_PWM_MIN;
+//    motor_front_pwm = MOTOR_PWM_MIN;
+//    motor_back_pwm = MOTOR_PWM_MIN;
+  
+    motor_left.writeMicroseconds(motor_left_pwm);
+//    motor_right.writeMicroseconds(motor_right_pwm);
+//    motor_front.writeMicroseconds(motor_front_pwm);
+//    motor_back.writeMicroseconds(motor_back_pwm);
+    
 //  t.every(20, motor);
 //    pinMode(2,OUTPUT);
 //    for(int x=4; x<8; x++) {pinMode(x, OUTPUT); }    
@@ -245,18 +308,15 @@ void setup() {
 //  rc_setup_interrupts();
 }
 
-void motor() {
-  
-  for(int x=4; x<8; x++) {pulsout(x, speeds[x-4]);}
-  
-}  
 
 
 void loop() {
   
   if (Serial3.available() > 0) {                              // Joystick reading available
     parseJoyStickInput();
+    throttleToMotor();
   }
+  
   
   if (Serial2.available() > 0) {                              // Xbee reading available
     parseIMUInput();
@@ -264,7 +324,9 @@ void loop() {
   }
   printJoyStickInput();
   printIMUReadings();
-//  analogWrite(2,168);
+  printMotorPWM();
+  Serial.println();
+  //  analogWrite(2,168);
 //  //loop_start, = millis();
 //  rc_process_channels();
 //  
@@ -359,7 +421,3 @@ void loop() {
 
 }
 
-float mapfloat(float x, float in_min, float in_max, float out_min, float out_max)
-{
- return (x - in_min)*(out_max - out_min)/(in_max - in_min)  + out_min; 
-}

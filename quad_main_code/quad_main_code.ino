@@ -49,22 +49,23 @@ float q_Euler[3] = {0.0,0.0,0.0};
 
 float_num q0,q1,q2,q3;
 
+
 ///////////////////////////////////////////////////////////
 
 ////////////////Motor Running Variables ///////////////////
 
 #define MOTOR_LEFT_PIN 8
 #define MOTOR_RIGHT_PIN 9
-#define MOTOR_FRONT_PIN 10
-#define MOTOR_BACK_PIN 11
+#define MOTOR_FRONT_PIN 11
+#define MOTOR_BACK_PIN 10
 
-#define MOTOR_PWM_MIN 1000
+#define MOTOR_PWM_MIN 800
 #define MOTOR_PWM_MAX 2000
 
 Servo motor_left;
-//Servo motor_right;
-//Servo motor_front;
-//Servo motor_back;
+Servo motor_right;
+Servo motor_front;
+Servo motor_back;
 
 int motor_left_pwm;
 int motor_right_pwm;
@@ -80,27 +81,28 @@ float rates[6];
 float roll,pitch,rollzero,pitchzero;
 float zhuman;
 float speeds[4];
-float k, d , i, kr, d
-r , ir;
+float k, d , i, kr, dr , ir;
 float pitch_set, roll_set, pitch_set_zero,roll_set_zero , roll_get, pitch_get;
 float ipitch , iroll,  gyroX , gyroY , pitch_in, roll_in, gyroZ ;
 int fly,c, count;
 
-void pulsout (int pin, int duration) {
-digitalWrite(pin, HIGH);
-delayMicroseconds(duration);
-digitalWrite(pin, LOW);
-
-}
 
 void updateMotors() {
-  motor_left.writeMicroseconds(motor_left_pwm);
-//    motor_right.writeMicroseconds(motor_right_pwm);
-//    motor_front.writeMicroseconds(motor_front_pwm);
-//    motor_back.writeMicroseconds(motor_back_pwm);
+    motor_left.writeMicroseconds(motor_left_pwm);
+    motor_right.writeMicroseconds(motor_right_pwm);
+    motor_front.writeMicroseconds(motor_front_pwm);
+    motor_back.writeMicroseconds(motor_back_pwm);
 }  
+
 void throttleToMotor() {
-  motor_left_pwm = MOTOR_PWM_MIN + (command_pitch.val+1)/2*(MOTOR_PWM_MAX-MOTOR_PWM_MIN);
+  if(command_pitch.val>0)
+    motor_left_pwm = MOTOR_PWM_MIN + (command_pitch.val)*(MOTOR_PWM_MAX-MOTOR_PWM_MIN);  
+  else
+    motor_left_pwm = MOTOR_PWM_MIN;
+    
+  motor_right_pwm = motor_left_pwm;
+  motor_front_pwm = motor_left_pwm;
+  motor_back_pwm = motor_left_pwm;
 }
 
 void parseJoyStickInput()
@@ -117,6 +119,7 @@ void parseJoyStickInput()
 //        printJoyStickInput();
         //FLAG_INPUT_PACKET_END = false;
         j_index = 0;
+        
         index1 = 0;
       }
       else {
@@ -131,6 +134,7 @@ void parseJoyStickInput()
   }
   if(FLAG_INPUT_PACKET_END == true)
   {
+    
     //FLAG_INPUT_PACKET_END = false;
     for(int i=0;i<FLOAT_SIZE;i++)
         command_roll.inp[i] = joystick[0][2*i]*16 + joystick[0][2*i+1];
@@ -267,6 +271,7 @@ void setup() {
      
     roll = 0;
     pitch = 0;
+    
     gyroX = 0;
     gyroY = 0;
     roll_set = 0;
@@ -280,19 +285,19 @@ void setup() {
     
     /// motor input settings////
     motor_left.attach(MOTOR_LEFT_PIN);
-//    motor_right.attach(MOTOR_RIGHT_PIN);
-//    motor_front.attach(MOTOR_FRONT_PIN);
-//    motor_back.attach(MOTOR_BACK_PIN);
+    motor_right.attach(MOTOR_RIGHT_PIN);
+    motor_front.attach(MOTOR_FRONT_PIN);
+    motor_back.attach(MOTOR_BACK_PIN);
 
     motor_left_pwm = MOTOR_PWM_MIN;
-//    motor_right_pwm = MOTOR_PWM_MIN;
-//    motor_front_pwm = MOTOR_PWM_MIN;
-//    motor_back_pwm = MOTOR_PWM_MIN;
+    motor_right_pwm = MOTOR_PWM_MIN;
+    motor_front_pwm = MOTOR_PWM_MIN;
+    motor_back_pwm = MOTOR_PWM_MIN;
   
     motor_left.writeMicroseconds(motor_left_pwm);
-//    motor_right.writeMicroseconds(motor_right_pwm);
-//    motor_front.writeMicroseconds(motor_front_pwm);
-//    motor_back.writeMicroseconds(motor_back_pwm);
+    motor_right.writeMicroseconds(motor_right_pwm);
+    motor_front.writeMicroseconds(motor_front_pwm);
+    motor_back.writeMicroseconds(motor_back_pwm);
     
 //  t.every(20, motor);
 //    pinMode(2,OUTPUT);
@@ -322,10 +327,12 @@ void loop() {
     parseIMUInput();
 
   }
+  updateMotors();
   printJoyStickInput();
   printIMUReadings();
   printMotorPWM();
   Serial.println();
+
   //  analogWrite(2,168);
 //  //loop_start, = millis();
 //  rc_process_channels();

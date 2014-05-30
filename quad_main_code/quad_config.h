@@ -7,7 +7,7 @@
 #define MOTOR_BACK_PIN 10
 
 #define MOTOR_PWM_MIN 800
-#define MOTOR_PWM_MAX 2000
+#define MOTOR_PWM_MAX 2500
 
 /* set the settings for the IMU here*/
 void initializeIMU();

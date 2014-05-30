@@ -76,14 +76,16 @@ void updateMotors() {
 }  
 
 void throttleToMotor() {
-  if(command_pitch.val>0)
-    motor_left_pwm = MOTOR_PWM_MIN + (command_pitch.val)*(MOTOR_PWM_MAX-MOTOR_PWM_MIN);  
+  int pwm_val = 0;
+  if(command_pitch.val>0 && command_pitch.val<1)
+    pwm_val = MOTOR_PWM_MIN + (command_pitch.val)*(MOTOR_PWM_MAX-MOTOR_PWM_MIN);  
   else
-    motor_left_pwm = MOTOR_PWM_MIN;
+    pwm_val = MOTOR_PWM_MIN;
     
-  motor_right_pwm = motor_left_pwm;
-  motor_front_pwm = motor_left_pwm;
-  motor_back_pwm = motor_left_pwm;
+  motor_left_pwm = pwm_val;
+  motor_right_pwm = pwm_val;
+  motor_front_pwm = pwm_val;
+  motor_back_pwm = pwm_val;
 }
 
 void parseJoyStickInput()
@@ -253,12 +255,12 @@ void initializeMotors() {
     motor_right.attach(MOTOR_RIGHT_PIN);
     motor_front.attach(MOTOR_FRONT_PIN);
     motor_back.attach(MOTOR_BACK_PIN);
-
+    
     motor_left_pwm = MOTOR_PWM_MIN;
     motor_right_pwm = MOTOR_PWM_MIN;
     motor_front_pwm = MOTOR_PWM_MIN;
     motor_back_pwm = MOTOR_PWM_MIN;
-  
+    
     motor_left.writeMicroseconds(motor_left_pwm);
     motor_right.writeMicroseconds(motor_right_pwm);
     motor_front.writeMicroseconds(motor_front_pwm);

@@ -9,6 +9,15 @@
 #define MOTOR_PWM_MIN 800
 #define MOTOR_PWM_MAX 2500
 
+
+#define JOYSTICK_START '$'
+#define JOYSTICK_END ':'
+
+#define MESSAGE_START '%'
+#define MESSAGE_END ':'
+
+#define EMERGENCY_STOP '!'
+
 /* set the settings for the IMU here*/
 void initializeIMU();
 
@@ -18,8 +27,20 @@ void initizeMotors();
 /* updates the PWM to each of the BLDC motors*/
 void updateMotors();
 
+/* STOPs the action of all the motors by setting them to minimum PWM*/
+void stopMotor();
+
 /* transforms the throttle value to motor PWM for all motors*/
 void throttleToMotor();
+
+/* takes input from Serial3 port and classifies it as either Joystick
+or Message input*/
+void parseSerialInput();
+
+/* A message can be taken from the user in the form of "FL 1500" for 
+sending a particular message and an argument from Serial3. This 
+function reads the messaae and takes an action*/
+void parseMessage();
 
 /* takes the joystick input on Serial3 and writes it to command_roll,
 command_pitch, command_thrust*/

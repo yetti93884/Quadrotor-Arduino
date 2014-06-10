@@ -68,12 +68,27 @@ float ipitch , iroll,  gyroX , gyroY , pitch_in, roll_in, gyroZ ;
 int fly,c, count;
 ///////////////////////////////////////////////////////////
 
+String in_string = "";    // string to hold input
+int in_num;                // argument to be passed along with the string
+
 void updateMotors() {
     motor_left.writeMicroseconds(motor_left_pwm);
     motor_right.writeMicroseconds(motor_right_pwm);
     motor_front.writeMicroseconds(motor_front_pwm);
     motor_back.writeMicroseconds(motor_back_pwm);
 }  
+
+void stopMotors() {
+
+  int pwm_val = MOTOR_PWM_MIN;
+
+  motor_left_pwm = pwm_val;
+  motor_right_pwm = pwm_val;
+  motor_front_pwm = pwm_val;
+  motor_back_pwm = pwm_val;
+
+  updateMotors();
+}
 
 void throttleToMotor() {
   int pwm_val = 0;
@@ -88,11 +103,102 @@ void throttleToMotor() {
   motor_back_pwm = pwm_val;
 }
 
-void parseJoyStickInput()
+void parseSerialInput()
 {
+  char in_char = Serial3.read();
+  if(in_char == JOYSTICK_START)
+  {
+    parseJoyStickInput();
+  }
+  else
+   {
+     if(in_char == MESSAGE_START)
+        parseMessage();
+     else if(in_char == EMERGENCY_STOP)
+        stopMotors();
+   }
+}
+
+void parseMessage()
+{
+  boolean FLAG_STR_END = false;
+  boolean FLAG_INP_ERROR = false;
+  int inp;
+  
+  while(Serial3.available()>0)
+  {  
+    char in_char = Serial3.read();
+
+    if((in_char != ' ')&& FLAG_STR_END==false)
+    {
+      in_string += in_char;
+    }
+    else if(in_char == ' ')
+    {
+      FLAG_STR_END = true;
+    }
+    else if(FLAG_STR_END == true)
+    {
+      if(isDigit(in_char))
+        in_num = in_num*10 + (in_char-'0');
+      else
+        FLAG_INP_ERROR = true;
+    }
+    delay(1);      //this delay is necessary for the proper functioning of Serial.
+  }
+
+  if(in_string.equals("LEFT"))
+  {
+    if(in_num>=MOTOR_PWM_MIN && in_num<=MOTOR_PWM_MAX)
+      motor_left_pwm = in_num;
+  }
+
+  if(in_string.equals("RIGHT"))
+  {
+    if(in_num>=MOTOR_PWM_MIN && in_num<=MOTOR_PWM_MAX)
+      motor_right_pwm = in_num;
+  }
+
+  if(in_string.equals("FRONT"))
+  {
+    if(in_num>=MOTOR_PWM_MIN && in_num<=MOTOR_PWM_MAX)
+      motor_front_pwm = in_num;
+  }
+
+
+  if(in_string.equals("BACK"))
+  {
+    if(in_num>=MOTOR_PWM_MIN && in_num<=MOTOR_PWM_MAX)
+      motor_back_pwm = in_num;
+  }
+
+  if(in_string.equals("ALL"))
+  {
+    int pwm_val = MOTOR_PWM_MIN;
+    if(in_num>=MOTOR_PWM_MIN && in_num<=MOTOR_PWM_MAX)
+      pwm_val = in_num;
+    motor_left_pwm = pwm_val;
+    motor_right_pwm = pwm_val;
+    motor_front_pwm = pwm_val;
+    motor_back_pwm = pwm_val;
+  }
+  
+  in_string = "";
+  in_num = 0;
+}
+
+void parseJoyStickInput()
+{  
+  
+  in_string = "";
   boolean FLAG_INPUT_PACKET_END = false;
-  while (Serial3.available() > 0) {
+  
+  
+  while(FLAG_INPUT_PACKET_END == false) {
+      
       joystick_bla = Serial3.read();
+      
+      
       if (joystick_bla == ',') {
         j_index = j_index + 1;
         index1 = 0;
@@ -102,23 +208,29 @@ void parseJoyStickInput()
 //        printJoyStickInput();
         //FLAG_INPUT_PACKET_END = false;
         j_index = 0;
-        
         index1 = 0;
       }
       else {
-        if(joystick_bla>='A')
+        if(joystick_bla>='A' && joystick_bla<='F')
+        {  
           joystick[j_index][index1] = joystick_bla-'A'+10;
-        else if(joystick_bla>='0'&&joystick_bla<='9')
-          joystick[j_index][index1] = joystick_bla-'0';
+          index1++;
+        }
         else
-          joystick[j_index][index1] = 0;
-        index1++;
+       {
+         if(joystick_bla>='0'&&joystick_bla<='9')
+         {
+           joystick[j_index][index1] = joystick_bla-'0';
+           index1++;
+         }
+       }
+            
     }
   }
   if(FLAG_INPUT_PACKET_END == true)
   {
-    
     //FLAG_INPUT_PACKET_END = false;
+    
     for(int i=0;i<FLOAT_SIZE;i++)
         command_roll.inp[i] = joystick[0][2*i]*16 + joystick[0][2*i+1];
   
@@ -127,7 +239,8 @@ void parseJoyStickInput()
     
     for(int i=0;i<FLOAT_SIZE;i++)
         command_thrust.inp[i] = joystick[2][2*i]*16 + joystick[2][2*i+1];
-  }
+  }  
+  throttleToMotor();
 }
 
 void parseIMUInput()
@@ -250,7 +363,9 @@ void initializeIMU() {
 
 void initializeMotors() {
       /// motor input settings////
-  
+    
+    in_string.reserve(30);
+
     motor_left.attach(MOTOR_LEFT_PIN);
     motor_right.attach(MOTOR_RIGHT_PIN);
     motor_front.attach(MOTOR_FRONT_PIN);

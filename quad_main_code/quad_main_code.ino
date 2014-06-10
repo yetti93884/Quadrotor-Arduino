@@ -17,13 +17,13 @@ void setup() {
 
   initializeIMU();
   initializeMotors();
+  
 }
 
 void loop() {
   
   if (Serial3.available() > 0) {                              // Joystick reading available
-    parseJoyStickInput();
-    throttleToMotor();
+    parseSerialInput();
   }
   
   if (Serial2.available() > 0) {                              // Xbee reading available
@@ -31,6 +31,8 @@ void loop() {
   }
 
   updateMotors();
+
+  
   printJoyStickInput();
   printIMUReadings();
   printMotorPWM();

@@ -123,8 +123,10 @@ void parseMessage()
 {
   boolean FLAG_STR_END = false;
   boolean FLAG_INP_ERROR = false;
+  boolean FLAG_VALID_INP = false;
   int inp;
   
+  //////////////READING THE INPUT//////////////
   while(Serial3.available()>0)
   {  
     char in_char = Serial3.read();
@@ -146,34 +148,43 @@ void parseMessage()
     }
     delay(1);      //this delay is necessary for the proper functioning of Serial.
   }
+  
+  //////////////////////////////////////////////////
+  
+  ////////COMPARING WITH EXISTING COMMANDS//////////
 
   if(in_string.equals("LEFT"))
   {
+    FLAG_VALID_INP = true;
     if(in_num>=MOTOR_PWM_MIN && in_num<=MOTOR_PWM_MAX)
       motor_left_pwm = in_num;
   }
+  
 
   if(in_string.equals("RIGHT"))
   {
+    FLAG_VALID_INP = true;
     if(in_num>=MOTOR_PWM_MIN && in_num<=MOTOR_PWM_MAX)
       motor_right_pwm = in_num;
   }
 
   if(in_string.equals("FRONT"))
   {
+    FLAG_VALID_INP = true;
     if(in_num>=MOTOR_PWM_MIN && in_num<=MOTOR_PWM_MAX)
       motor_front_pwm = in_num;
   }
 
-
   if(in_string.equals("BACK"))
   {
+    FLAG_VALID_INP = true;
     if(in_num>=MOTOR_PWM_MIN && in_num<=MOTOR_PWM_MAX)
       motor_back_pwm = in_num;
   }
 
   if(in_string.equals("ALL"))
   {
+    FLAG_VALID_INP = true;
     int pwm_val = MOTOR_PWM_MIN;
     if(in_num>=MOTOR_PWM_MIN && in_num<=MOTOR_PWM_MAX)
       pwm_val = in_num;
@@ -182,7 +193,27 @@ void parseMessage()
     motor_front_pwm = pwm_val;
     motor_back_pwm = pwm_val;
   }
+  /////////////////////////////////////////////////////
   
+  ////////////CHECKING IF THE INPUT IS VALID///////////
+  if(FLAG_VALID_INP == false)
+  {
+    Serial3.println("INVALID INPUT");
+  }
+  /////////////////////////////////////////////////////
+  
+  
+  ////////////PRINTING MOTOR STATES////////////////////
+  Serial3.print(" Motor PWM : left- ");
+  Serial3.print(motor_left_pwm);
+  Serial3.print(" right- ");
+  Serial3.print(motor_right_pwm);
+  Serial3.print(" front- ");
+  Serial3.print(motor_front_pwm);
+  Serial3.print(" back- ");
+  Serial3.print(motor_back_pwm);  
+  Serial3.println("  |  ");
+  /////////////////////////////////////////////////////
   in_string = "";
   in_num = 0;
 }

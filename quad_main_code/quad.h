@@ -115,7 +115,10 @@ void parseSerialInput()
      if(in_char == MESSAGE_START)
         parseMessage();
      else if(in_char == EMERGENCY_STOP)
-        stopMotors();
+        {
+          Serial3.println("EMERGENCY STOP FOR MOTORS");
+          stopMotors();
+        }
    }
 }
 
@@ -192,6 +195,10 @@ void parseMessage()
     motor_right_pwm = pwm_val;
     motor_front_pwm = pwm_val;
     motor_back_pwm = pwm_val;
+  }
+  if(in_string.equals("SHOW"))
+  {
+    FLAG_VALID_INP = true;
   }
   /////////////////////////////////////////////////////
   

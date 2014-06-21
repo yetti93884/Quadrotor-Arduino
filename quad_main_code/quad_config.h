@@ -6,7 +6,7 @@
 #define MOTOR_FRONT_PIN 11  //anti-clockwise
 #define MOTOR_BACK_PIN 10  //anti-clockwise
 
-#define MOTOR_PWM_MIN 900
+#define MOTOR_PWM_MIN 1000
 #define MOTOR_ARM_PWM 800
 #define MOTOR_PWM_MAX 1300
 

@@ -135,11 +135,16 @@ void updateMotors() {
     else if (motor_back_pwm >= MOTOR_PWM_MAX){
       motor_back_pwm = MOTOR_PWM_MAX;
     }
+    //delay(20);
     
-    motor_left.writeMicroseconds(motor_left_pwm);
-    motor_right.writeMicroseconds(motor_right_pwm);
     motor_front.writeMicroseconds(motor_front_pwm);
+    motor_right.writeMicroseconds(motor_right_pwm);
+    motor_left.writeMicroseconds(motor_left_pwm);
     motor_back.writeMicroseconds(motor_back_pwm);
+    
+    Serial.println();
+    printMotorPWM();
+    Serial.println();
 }  
 
 void stopMotors() {
@@ -150,8 +155,13 @@ void stopMotors() {
   motor_right_pwm = pwm_val;
   motor_front_pwm = pwm_val;
   motor_back_pwm = pwm_val;
+  
+  motor_right.writeMicroseconds(motor_right_pwm);
+  motor_left.writeMicroseconds(motor_left_pwm);
+  motor_front.writeMicroseconds(motor_front_pwm);
+  motor_back.writeMicroseconds(motor_back_pwm);
+  delay(10000);
 
-  updateMotors();
 }
 
 void throttleToMotor() {
@@ -574,7 +584,7 @@ void updateControlParams() {
   velocities[0] = 0.0;
   velocities[1] = 0.0;
   velocities[2] = 0.0;
-  Serial3.println(pose[0]);
+  //Serial3.println(pose[0]);
 }
   
 void executeController() {  //psi,theta,phi  x,y,z

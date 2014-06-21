@@ -22,6 +22,7 @@ void setup() {
 
   initializeIMU();
   initializeMotors();
+  delay(20000);
   
 }
 

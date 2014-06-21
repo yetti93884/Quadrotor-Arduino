@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include "quad_config.h"
+
 /////////// Joystick variables /////////////////////////////
 
 char joystick[3][10];
@@ -33,7 +34,11 @@ int q_index = 0;
 int p_index = 0;
 
 float quaternion[4] = {0.0,0.0,0.0,0.0};
+float bla_quaternion[4] = {0.0,0.0,0.0,0.0};
+float home_quaternion[4] = {0.0,0.0,0.0,0.0};
 float q_Euler[3] = {0.0,0.0,0.0};
+boolean FLAG_IMU_PACKET_END = false;
+boolean IMU_offset_set = false;  // true if offset is set
 
 float_num q0,q1,q2,q3;
 
@@ -50,28 +55,87 @@ int motor_right_pwm;
 int motor_front_pwm;
 int motor_back_pwm;
 
+float thrust_pwm_constant = 1.846;    // Thrust = 1.846*(pwm - 819.6)
+float torque_pwm_constant = 1.858;  // scaled by 10**4
+int thrust_pwm_min = (int)900;  //900 is good
+int torque_pwm_min = (int)1144.24;
+
 /////////////////////////////////////////////////////////// 
 
 
 ///////////////Other operation variables///////////////////
-int loop_start;
+int last_pose_update = millis();    // time when last pose update is carried out - in milli seconds
+int last_pos_update = millis();    // time when last position update is carried out - in milli seconds
+Timer t;
+float pose_dt = 0.0;
+float position_dt = 0.0;
+boolean USER_OVERRIDE = false;    // turns true on emergency stop which disable controller to set pwms anymore.
 
-float angles[3]; // yaw pitch roll
-float rates[6];
+///////////////Control Parameters//////////////////////////
+float pose[3] = {0.0, 0.0, 0.0}; // yaw pitch roll
+float angularrates[3] = {0.0, 0.0, 0.0};  //yaw_dot, pitch_dot, roll_dot
+float pose_setpoints[3] = {0.0, 0.0, 0.0};  // yaw_set, pitch_set, roll_set
+float position_setpoints[3] = {0.0, 0.0, 0.0};  //x,y,z
+float quad_position[3];        //x,y,z
+float velocities[3];
 
-float roll,pitch,rollzero,pitchzero;
-float zhuman;
 float speeds[4];
-float k, d , i, kr, dr , ir;
-float pitch_set, roll_set, pitch_set_zero,roll_set_zero , roll_get, pitch_get;
-float ipitch , iroll,  gyroX , gyroY , pitch_in, roll_in, gyroZ ;
-int fly,c, count;
+float alpha1 = 0.1;
+float alpha2 = 0.1;
+float alpha3 = 0.1;
+float alpha4 = 0.1;
+float alpha5 = 2.0;
+float alpha6 = 1.0;
+float alpha7 = 0.1;
+float alpha8 = 0.1;
+float U1, U2, U3, U4;
+
+/////////////Physical Parameters//////////////////////////
+float m = 1.1;
+float g = 9.8;
+float Ixx = 0.043675;//0.0085;
+float Iyy = 0.043675;//0.0085;
+float Izz = 0.082800;//0.0165;
+float a1 = (Iyy-Izz)/Ixx;
+float a3 = (Izz-Ixx)/Iyy;
+float a5 = (Ixx-Iyy)/Izz;
+float b1 = 1/Ixx;
+float b2 = 1/Iyy;
+float b3 = 1/Izz;
 ///////////////////////////////////////////////////////////
 
 String in_string = "";    // string to hold input
 int in_num;                // argument to be passed along with the string
 
 void updateMotors() {
+    if (motor_left_pwm <= MOTOR_PWM_MIN) {
+      motor_left_pwm = MOTOR_PWM_MIN;
+    }
+    else if (motor_left_pwm >= MOTOR_PWM_MAX){
+      motor_left_pwm = MOTOR_PWM_MAX;
+    }
+    
+    if (motor_right_pwm <= MOTOR_PWM_MIN) {
+      motor_right_pwm = MOTOR_PWM_MIN;
+    }
+    else if (motor_right_pwm >= MOTOR_PWM_MAX){
+      motor_right_pwm = MOTOR_PWM_MAX;
+    }
+    
+    if (motor_front_pwm <= MOTOR_PWM_MIN) {
+      motor_front_pwm = MOTOR_PWM_MIN;
+    }
+    else if (motor_front_pwm >= MOTOR_PWM_MAX){
+      motor_front_pwm = MOTOR_PWM_MAX;
+    }
+    
+    if (motor_back_pwm <= MOTOR_PWM_MIN) {
+      motor_back_pwm = MOTOR_PWM_MIN;
+    }
+    else if (motor_back_pwm >= MOTOR_PWM_MAX){
+      motor_back_pwm = MOTOR_PWM_MAX;
+    }
+    
     motor_left.writeMicroseconds(motor_left_pwm);
     motor_right.writeMicroseconds(motor_right_pwm);
     motor_front.writeMicroseconds(motor_front_pwm);
@@ -80,7 +144,7 @@ void updateMotors() {
 
 void stopMotors() {
 
-  int pwm_val = MOTOR_PWM_MIN;
+  int pwm_val = MOTOR_ARM_PWM;
 
   motor_left_pwm = pwm_val;
   motor_right_pwm = pwm_val;
@@ -117,8 +181,15 @@ void parseSerialInput()
      else if(in_char == EMERGENCY_STOP)
         {
           Serial3.println("EMERGENCY STOP FOR MOTORS");
+          USER_OVERRIDE = true;
           stopMotors();
         }
+     else if(in_char == CONTROL_RESTART)
+       {
+          Serial3.println("CONTROL RESTART FOR MOTORS");
+          USER_OVERRIDE = false;
+          updateMotors();
+       }
    }
 }
 
@@ -159,38 +230,74 @@ void parseMessage()
   if(in_string.equals("LEFT"))
   {
     FLAG_VALID_INP = true;
-    if(in_num>=MOTOR_PWM_MIN && in_num<=MOTOR_PWM_MAX)
+    if(in_num>=MOTOR_PWM_MIN && in_num<=MOTOR_PWM_MAX) {
       motor_left_pwm = in_num;
+    }
+    else if (in_num <= MOTOR_PWM_MIN) {
+      motor_left_pwm = MOTOR_PWM_MIN;
+    }
+    else {
+      motor_left_pwm = MOTOR_PWM_MAX;
+    }
+    
   }
   
 
   if(in_string.equals("RIGHT"))
   {
     FLAG_VALID_INP = true;
-    if(in_num>=MOTOR_PWM_MIN && in_num<=MOTOR_PWM_MAX)
+    if(in_num>=MOTOR_PWM_MIN && in_num<=MOTOR_PWM_MAX) {
       motor_right_pwm = in_num;
+    }
+    else if (in_num <= MOTOR_PWM_MIN) {
+      motor_right_pwm = MOTOR_PWM_MIN;
+    }
+    else {
+      motor_right_pwm = MOTOR_PWM_MAX;
+    }
   }
 
   if(in_string.equals("FRONT"))
   {
     FLAG_VALID_INP = true;
-    if(in_num>=MOTOR_PWM_MIN && in_num<=MOTOR_PWM_MAX)
+    if(in_num>=MOTOR_PWM_MIN && in_num<=MOTOR_PWM_MAX) {
       motor_front_pwm = in_num;
+    }
+    else if (in_num <= MOTOR_PWM_MIN) {
+      motor_front_pwm = MOTOR_PWM_MIN;
+    }
+    else {
+      motor_front_pwm = MOTOR_PWM_MAX;
+    }
   }
 
   if(in_string.equals("BACK"))
   {
     FLAG_VALID_INP = true;
-    if(in_num>=MOTOR_PWM_MIN && in_num<=MOTOR_PWM_MAX)
+    if(in_num>=MOTOR_PWM_MIN && in_num<=MOTOR_PWM_MAX) {
       motor_back_pwm = in_num;
+    }
+    else if (in_num <= MOTOR_PWM_MIN) {
+      motor_back_pwm = MOTOR_PWM_MIN;
+    }
+    else {
+      motor_back_pwm = MOTOR_PWM_MAX;
+    }
   }
 
   if(in_string.equals("ALL"))
   {
     FLAG_VALID_INP = true;
     int pwm_val = MOTOR_PWM_MIN;
-    if(in_num>=MOTOR_PWM_MIN && in_num<=MOTOR_PWM_MAX)
+    if(in_num>=MOTOR_PWM_MIN && in_num<=MOTOR_PWM_MAX) {
       pwm_val = in_num;
+    }
+    else if (in_num <= MOTOR_PWM_MIN) {
+      pwm_val = MOTOR_PWM_MIN;
+    }
+    else {
+      pwm_val = MOTOR_PWM_MAX;
+    }
     motor_left_pwm = pwm_val;
     motor_right_pwm = pwm_val;
     motor_front_pwm = pwm_val;
@@ -283,9 +390,10 @@ void parseJoyStickInput()
 
 void parseIMUInput()
 {
-  boolean FLAG_IMU_PACKET_END = false;
+  //boolean FLAG_IMU_PACKET_END = false;
   while (Serial2.available() > 0) {
       IMU_bla = Serial2.read();
+      //Serial3.write(IMU_bla);
       if (IMU_bla == ',') {
         q_index = q_index + 1;
         index2 = 0;
@@ -322,6 +430,26 @@ void parseIMUInput()
     for(int i=0;i<FLOAT_SIZE;i++)
         q3.inp[i] = IMU[3][2*i]*16 + IMU[3][2*i+1];
   }
+  
+  bla_quaternion[0] = q0.val;
+  bla_quaternion[1] = q1.val;
+  bla_quaternion[2] = q2.val;
+  bla_quaternion[3] = q3.val;
+  
+  if (IMU_offset_set == true) {
+    quatProd(home_quaternion, bla_quaternion, quaternion);
+  }
+  else {
+    quaternion[0] = bla_quaternion[0];
+    quaternion[1] = bla_quaternion[1];
+    quaternion[2] = bla_quaternion[2];
+    quaternion[3] = bla_quaternion[3];
+  }
+  
+  quaternionToEuler(quaternion, q_Euler);
+  pose_dt = (millis() - last_pose_update)/1000.0;
+  last_pose_update = millis();
+    
 }
 
 void printJoyStickInput()
@@ -339,9 +467,26 @@ void printJoyStickInput()
 }
 
 void quaternionToEuler(float *q, float *euler) {
-  euler[0] = atan2(2 * q[1] * q[2] - 2 * q[0] * q[3], 2 * q[0]*q[0] + 2 * q[1] * q[1] - 1); // psi
-  euler[1] = -asin(2 * q[1] * q[3] + 2 * q[0] * q[2]); // theta
-  euler[2] = atan2(2 * q[2] * q[3] - 2 * q[0] * q[1], 2 * q[0] * q[0] + 2 * q[3] * q[3] - 1); // phi
+//  euler[0] = atan2(2 * q[1] * q[2] - 2 * q[0] * q[3], 2 * q[0]*q[0] + 2 * q[1] * q[1] - 1); // psi
+//  euler[1] = -asin(2 * q[1] * q[3] + 2 * q[0] * q[2]); // theta
+//  euler[2] = atan2(2 * q[2] * q[3] - 2 * q[0] * q[1], 2 * q[0] * q[0] + 2 * q[3] * q[3] - 1); // phi
+  euler[1] = -atan2(2 * q[0] * q[1] + 2 * q[2] * q[3], 1 - 2 * q[1]*q[1] - 2 * q[2] * q[2]); // phi
+  euler[2] = -asin(2 * q[0] * q[2] - 2 * q[3] * q[1]); // theta
+  euler[0] = atan2(2 * q[0] * q[3] + 2 * q[1] * q[2], 1 - 2 * q[2] * q[2] - 2 * q[3] * q[3]); // psi
+}
+
+void quatConjugate(float *quat, float *result) {
+  result[0] = quat[0];
+  result[1] = -quat[1];
+  result[2] = -quat[2];
+  result[3] = -quat[3];
+}
+
+void quatProd(float * a, float * b, float * result) {
+  result[0] = a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3];
+  result[1] = a[0] * b[1] + a[1] * b[0] + a[2] * b[3] - a[3] * b[2];
+  result[2] = a[0] * b[2] - a[1] * b[3] + a[2] * b[0] + a[3] * b[1];
+  result[3] = a[0] * b[3] + a[1] * b[2] - a[2] * b[1] + a[3] * b[0];
 }
 
 void printMotorPWM() {
@@ -358,12 +503,12 @@ void printMotorPWM() {
 
 void printIMUReadings()
 {
-  quaternion[0] = q0.val;
+  /*quaternion[0] = q0.val;
   quaternion[1] = q1.val;
   quaternion[2] = q2.val;
-  quaternion[3] = q3.val;
+  quaternion[3] = q3.val;*/
 
-  quaternionToEuler(quaternion, q_Euler);
+  //quaternionToEuler(quaternion, q_Euler);
   Serial.print("Yaw: ");
   Serial.print(degrees(q_Euler[0]),4);
   Serial.print(' ');
@@ -376,27 +521,15 @@ void printIMUReadings()
 }
 
 void initializeIMU() {
-  loop_start = 0;
-  count = 0;
-   k = 0.00;
-   d = 0.00;
-   i = 0.00;
-   kr = 6.00;
-   dr = 1.10;
-   ir = 0.00;
-     
-    roll = 0;
-    pitch = 0;
-    
-    gyroX = 0;
-    gyroY = 0;
-    roll_set = 0;
-    pitch_set = 0;
-    roll_set_zero = 0;
-    pitch_set_zero = 0;
-    zhuman = 800.0;
-    iroll = 0; 
-    ipitch = 0;
+}
+
+void setIMUoffset() {
+  char input = Serial.read();
+  if (input == 'h') {
+    Serial.println("Setting home quaternion!!");
+    quatConjugate(quaternion, home_quaternion);
+    IMU_offset_set = true;
+  }
 }
 
 void initializeMotors() {
@@ -409,15 +542,97 @@ void initializeMotors() {
     motor_front.attach(MOTOR_FRONT_PIN);
     motor_back.attach(MOTOR_BACK_PIN);
     
-    motor_left_pwm = MOTOR_PWM_MIN;
-    motor_right_pwm = MOTOR_PWM_MIN;
-    motor_front_pwm = MOTOR_PWM_MIN;
-    motor_back_pwm = MOTOR_PWM_MIN;
+    motor_left_pwm = MOTOR_ARM_PWM;
+    motor_right_pwm = MOTOR_ARM_PWM;
+    motor_front_pwm = MOTOR_ARM_PWM;
+    motor_back_pwm = MOTOR_ARM_PWM;
     
     motor_left.writeMicroseconds(motor_left_pwm);
     motor_right.writeMicroseconds(motor_right_pwm);
     motor_front.writeMicroseconds(motor_front_pwm);
     motor_back.writeMicroseconds(motor_back_pwm);
+}
+
+void updateControlParams() {
+  
+  if (FLAG_IMU_PACKET_END == true) {
+    angularrates[0] = (q_Euler[0] - pose[0])/pose_dt;
+    pose[0] = q_Euler[0];
+    
+    angularrates[1] = (q_Euler[1] - pose[1])/pose_dt;
+    pose[1] = q_Euler[1];
+    
+    angularrates[2] = (q_Euler[2] - pose[2])/pose_dt;
+    pose[2] = q_Euler[2];
+    
+    FLAG_IMU_PACKET_END = false;
+  }
+  
+  quad_position[0] = 0.0;
+  quad_position[1] = 0.0;
+  quad_position[2] = 0.0;
+  velocities[0] = 0.0;
+  velocities[1] = 0.0;
+  velocities[2] = 0.0;
+  Serial3.println(pose[0]);
+}
+  
+void executeController() {  //psi,theta,phi  x,y,z
+  float z1 = pose_setpoints[2] - pose[2];
+  float z3 = pose_setpoints[1] - pose[1];
+  float z5 = pose_setpoints[0] - pose[0];
+  float z7 = position_setpoints[2] - quad_position[2];
+  float z2 = angularrates[2] - alpha1*z1;
+  float z4 = angularrates[1] - alpha3*z3;
+  float z6 = angularrates[0] - alpha5*z5;
+  float z8 = velocities[2] - alpha7*z7;
+  Serial.print("Check: ");
+  Serial.print(alpha5*z5);
+  Serial.print(" ");
+  Serial.print(z6);
+  
+  U1 = m*(z7 + g - alpha7*(z8+alpha7*z7) - alpha8*z8)/(cos(pose[2])*cos(pose[1]));
+  U2 = (z1 - a1*angularrates[1]*angularrates[0] - alpha1*(z2+alpha1*z1) - alpha2*z2)/b1;
+  U3 = (z3 - a3*angularrates[2]*angularrates[0] - alpha3*(z4+alpha3*z3) - alpha4*z4)/b2;
+  U4 = (z5 - a5*angularrates[1]*angularrates[2] - alpha5*(z6+alpha5*z5) - alpha6*z6)/b3;
+  
+  Serial.print("Control Inputs:  ");
+  Serial.print(U1);
+  Serial.print(" ");
+  Serial.print(U2);
+  Serial.print(" ");
+  Serial.print(U3);
+  Serial.print(" ");
+  Serial.println(U4);
+  
+  U1 = m*9.8;	// only yaw control
+  U2 = U3 = 0.0;	// only yaw control
+}
+
+void getPWM() {
+//  thrust_pwm_constant, torque_pwm_constant
+//  motor_left_pwm 
+//  = (U1 + 0.2126)/0.0001858;
+  Serial.print("Motor pwm: ");
+  Serial.print(thrust_pwm_constant);
+  Serial.print(" ");
+  Serial.print(torque_pwm_constant);
+  Serial.print(" ");
+  
+  if (USER_OVERRIDE == false) {
+    motor_front_pwm = (int)(thrust_pwm_min + 0.5*(0.5*(U1/thrust_pwm_constant + U4*10000/torque_pwm_constant)+U3/thrust_pwm_constant));
+    motor_back_pwm = (int)(thrust_pwm_min + 0.5*(0.5*(U1/thrust_pwm_constant + U4*10000/torque_pwm_constant)-U3/thrust_pwm_constant));
+    motor_right_pwm = (int)(thrust_pwm_min + 0.5*(0.5*(U1/thrust_pwm_constant - U4*10000/torque_pwm_constant)+U2/thrust_pwm_constant));
+    motor_left_pwm = (int)(thrust_pwm_min + 0.5*(0.5*(U1/thrust_pwm_constant - U4*10000/torque_pwm_constant)-U2/thrust_pwm_constant));
+  }
+  
+  Serial.print(motor_front_pwm);  //11 -> front
+  Serial.print(" ");
+  Serial.print(motor_back_pwm);  //10 -> back
+  Serial.print(" ");
+  Serial.print(motor_right_pwm);  //9  -> right
+  Serial.print(" ");
+  Serial.println(motor_left_pwm);  //8  -> left
 }
 
 #endif

@@ -17,8 +17,8 @@ void setup() {
   Serial3.begin(57600);  // xbee
   Wire.begin();
   
-  //delay(5);
   delay(5);
+  //delay(5000);
 
   initializeIMU();
   initializeMotors();

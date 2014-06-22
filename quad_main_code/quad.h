@@ -84,8 +84,8 @@ float alpha1 = 0.1;
 float alpha2 = 0.1;
 float alpha3 = 0.1;
 float alpha4 = 0.1;
-float alpha5 = 2.0;
-float alpha6 = 1.0;
+float alpha5 = 2.5;
+float alpha6 = 1.5;
 float alpha7 = 0.1;
 float alpha8 = 0.1;
 float U1, U2, U3, U4;
@@ -106,8 +106,9 @@ float b3 = 1/Izz;
 
 String in_string = "";    // string to hold input
 int in_num;                // argument to be passed along with the string
+float in_float = 0.0;            // argument to be passed along with the string
 
-void updateMotors() {
+void getInBounds() {
     if (motor_left_pwm <= MOTOR_PWM_MIN) {
       motor_left_pwm = MOTOR_PWM_MIN;
     }
@@ -135,6 +136,8 @@ void updateMotors() {
     else if (motor_back_pwm >= MOTOR_PWM_MAX){
       motor_back_pwm = MOTOR_PWM_MAX;
     }
+}
+void updateMotors() {
     //delay(20);
     
     motor_front.writeMicroseconds(motor_front_pwm);
@@ -142,9 +145,9 @@ void updateMotors() {
     motor_left.writeMicroseconds(motor_left_pwm);
     motor_back.writeMicroseconds(motor_back_pwm);
     
-    Serial.println();
-    printMotorPWM();
-    Serial.println();
+//    Serial.println();
+//    printMotorPWM();
+//    Serial.println();
 }  
 
 void stopMotors() {
@@ -160,7 +163,7 @@ void stopMotors() {
   motor_left.writeMicroseconds(motor_left_pwm);
   motor_front.writeMicroseconds(motor_front_pwm);
   motor_back.writeMicroseconds(motor_back_pwm);
-  delay(10000);
+  //delay(10000);
 
 }
 
@@ -198,7 +201,7 @@ void parseSerialInput()
        {
           Serial3.println("CONTROL RESTART FOR MOTORS");
           USER_OVERRIDE = false;
-          updateMotors();
+          //updateMotors();
        }
    }
 }
@@ -208,6 +211,7 @@ void parseMessage()
   boolean FLAG_STR_END = false;
   boolean FLAG_INP_ERROR = false;
   boolean FLAG_VALID_INP = false;
+  int decimal_count = 0;
   int inp;
   
   //////////////READING THE INPUT//////////////
@@ -225,13 +229,19 @@ void parseMessage()
     }
     else if(FLAG_STR_END == true)
     {
-      if(isDigit(in_char))
+      if(isDigit(in_char)) {
         in_num = in_num*10 + (in_char-'0');
+      }
+      else if (in_char == '.')
+        decimal_count++;
       else
         FLAG_INP_ERROR = true;
     }
     delay(1);      //this delay is necessary for the proper functioning of Serial.
   }
+  
+  in_float = in_num/pow(10.0, decimal_count);
+  decimal_count = 0;
   
   //////////////////////////////////////////////////
   
@@ -313,9 +323,86 @@ void parseMessage()
     motor_front_pwm = pwm_val;
     motor_back_pwm = pwm_val;
   }
+  
+  if (in_string.equals("ALPHA1")) {
+    FLAG_VALID_INP = true;
+    alpha1 = in_float;
+  }
+  
+  if (in_string.equals("ALPHA2")) {
+    FLAG_VALID_INP = true;
+    alpha2 = in_float;
+  }
+  
+  if (in_string.equals("ALPHA3")) {
+    FLAG_VALID_INP = true;
+    alpha3 = in_float;
+  }
+  
+  if (in_string.equals("ALPHA4")) {
+    FLAG_VALID_INP = true;
+    alpha4 = in_float;
+  }
+  
+  if (in_string.equals("ALPHA5")) {
+    FLAG_VALID_INP = true;
+    alpha5 = in_float;
+  }
+  
+  if (in_string.equals("ALPHA6")) {
+    FLAG_VALID_INP = true;
+    alpha6 = in_float;
+  }
+  
+  if (in_string.equals("ALPHA7")) {
+    FLAG_VALID_INP = true;
+    alpha7 = in_float;
+  }
+  
+  if (in_string.equals("ALPHA8")) {
+    FLAG_VALID_INP = true;
+    alpha8 = in_float;
+  }
+  
+  Serial.println();
+  Serial.print("Alphas: ");
+  Serial.print(alpha1);
+  Serial.print(" ");
+  Serial.print(alpha2);
+  Serial.print(" ");
+  Serial.print(alpha3);
+  Serial.print(" ");
+  Serial.print(alpha4);
+  Serial.print(" ");
+  Serial.print(alpha5);
+  Serial.print(" ");
+  Serial.print(alpha6);
+  Serial.print(" ");
+  Serial.print(alpha7);
+  Serial.print(" ");
+  Serial.print(alpha8);
+  Serial.println();
+    
   if(in_string.equals("SHOW"))
   {
     FLAG_VALID_INP = true;
+    Serial3.print("Alphas: ");
+    Serial3.print(alpha1);
+    Serial3.print(" ");
+    Serial3.print(alpha2);
+    Serial3.print(" ");
+    Serial3.print(alpha3);
+    Serial3.print(" ");
+    Serial3.print(alpha4);
+    Serial3.print(" ");
+    Serial3.print(alpha5);
+    Serial3.print(" ");
+    Serial3.print(alpha6);
+    Serial3.print(" ");
+    Serial3.print(alpha7);
+    Serial3.print(" ");
+    Serial3.print(alpha8);
+    Serial3.println();
   }
   /////////////////////////////////////////////////////
   
@@ -634,6 +721,8 @@ void getPWM() {
     motor_back_pwm = (int)(thrust_pwm_min + 0.5*(0.5*(U1/thrust_pwm_constant + U4*10000/torque_pwm_constant)-U3/thrust_pwm_constant));
     motor_right_pwm = (int)(thrust_pwm_min + 0.5*(0.5*(U1/thrust_pwm_constant - U4*10000/torque_pwm_constant)+U2/thrust_pwm_constant));
     motor_left_pwm = (int)(thrust_pwm_min + 0.5*(0.5*(U1/thrust_pwm_constant - U4*10000/torque_pwm_constant)-U2/thrust_pwm_constant));
+    
+    getInBounds();
   }
   
   Serial.print(motor_front_pwm);  //11 -> front

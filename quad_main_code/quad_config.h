@@ -6,7 +6,7 @@
 #define MOTOR_FRONT_PIN 11  //anti-clockwise
 #define MOTOR_BACK_PIN 10  //anti-clockwise
 
-#define MOTOR_PWM_MIN 1000
+#define MOTOR_PWM_MIN 900
 #define MOTOR_ARM_PWM 800
 #define MOTOR_PWM_MAX 1300
 
@@ -25,6 +25,9 @@ void initializeIMU();
 
 /* set the BLDC motor initial configuration here */
 void initizeMotors();
+
+/* Bounds PWM in the [PWM_MIN, PWM_MAX] range */
+void getInBounds();
 
 /* updates the PWM to each of the BLDC motors*/
 void updateMotors();

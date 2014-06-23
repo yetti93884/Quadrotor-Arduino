@@ -226,11 +226,12 @@ void parseMessage()
   int decimal_count = 0;
   int inp;
   
+  delay(2);
   //////////////READING THE INPUT//////////////
   while(Serial3.available()>0)
   {  
     char in_char = Serial3.read();
-
+  
     if((in_char != ' ')&& FLAG_STR_END==false)
     {
       in_string += in_char;
@@ -430,6 +431,9 @@ void parseMessage()
   ////////////CHECKING IF THE INPUT IS VALID///////////
   if(FLAG_VALID_INP == false)
   {
+    Serial3.print(in_string);
+    Serial3.print(" ");
+    Serial3.println(in_num);
     Serial3.println("INVALID INPUT");
   }
   /////////////////////////////////////////////////////
@@ -714,6 +718,8 @@ void executeController() {  //psi,theta,phi  x,y,z
   U3 = (z3 - a3*angularrates[2]*angularrates[0] - alpha3*(z4+alpha3*z3) - alpha4*z4)/b2;
   U4 = (z5 - a5*angularrates[1]*angularrates[2] - alpha5*(z6+alpha5*z5) - alpha6*z6)/b3;
   
+  /***********COMMENTED by atulya**************
+  because it increases control loop time to 23ms instead of 20ms
   Serial.print("Control Inputs:  ");
   Serial.print(U1);
   Serial.print(" ");
@@ -722,6 +728,7 @@ void executeController() {  //psi,theta,phi  x,y,z
   Serial.print(U3);
   Serial.print(" ");
   Serial.println(U4);
+  **********************************************/
   
   U1 = m*9.8;	// only yaw control
   U2 = U3 = 0.0;	// only yaw control
@@ -731,11 +738,14 @@ void getPWM() {
 //  thrust_pwm_constant, torque_pwm_constant
 //  motor_left_pwm 
 //  = (U1 + 0.2126)/0.0001858;
+  /***********COMMENTED by atulya**************
+  because it increases control loop time to 23ms instead of 20ms
   Serial.print("Motor pwm: ");
   Serial.print(thrust_pwm_constant);
   Serial.print(" ");
   Serial.print(torque_pwm_constant);
   Serial.print(" ");
+  ********************************************/
   
   if (USER_OVERRIDE == false) {
     motor_front_pwm = (int)(thrust_pwm_min + 0.5*(0.5*(U1/thrust_pwm_constant + U4*10000/torque_pwm_constant)+U3/thrust_pwm_constant));
@@ -746,6 +756,8 @@ void getPWM() {
     getInBounds();
   }
   
+  /***********COMMENTED by atulya**************
+  because it increases control loop time to 23ms instead of 20ms
   Serial.print(motor_front_pwm);  //11 -> front
   Serial.print(" ");
   Serial.print(motor_back_pwm);  //10 -> back
@@ -753,6 +765,7 @@ void getPWM() {
   Serial.print(motor_right_pwm);  //9  -> right
   Serial.print(" ");
   Serial.println(motor_left_pwm);  //8  -> left
+  ********************************************/
 }
 
 void sendDataMRF(int del_t)                                              //sends the IMU data and motor PWMs via 
@@ -770,33 +783,33 @@ void sendDataMRF(int del_t)                                              //sends
   m4.val = motor_right_pwm;
   delT.val = del_t;
 
-  Serial.print('$');              //message start character
+  Serial3.print('$');              //message start character
   
   for(int i=0;i<INT_SIZE;i++)    //sending delta time between two executions
-    Serial.write(delT.inp[i]);
+    Serial3.write(delT.inp[i]);
   
   for(int i=0;i<FLOAT_SIZE;i++)  //sending yaw
-    Serial.write(yaw.inp[i]);
+    Serial3.write(yaw.inp[i]);
   
   for(int i=0;i<FLOAT_SIZE;i++)  //sending pitch
-    Serial.write(pitch.inp[i]);
+    Serial3.write(pitch.inp[i]);
   
   for(int i=0;i<FLOAT_SIZE;i++)  //sending roll
-    Serial.write(roll.inp[i]);
+    Serial3.write(roll.inp[i]);
     
   for(int i=0;i<INT_SIZE;i++)    //sending front PWM
-    Serial.write(m1.inp[i]);
+    Serial3.write(m1.inp[i]);
     
   for(int i=0;i<INT_SIZE;i++)    //sending back PWM
-    Serial.write(m2.inp[i]);
+    Serial3.write(m2.inp[i]);
   
   for(int i=0;i<INT_SIZE;i++)    //sending left PWM
-    Serial.write(m3.inp[i]);
+    Serial3.write(m3.inp[i]);
     
   for(int i=0;i<INT_SIZE;i++)    //sending right PWM
-    Serial.write(m4.inp[i]);
+    Serial3.write(m4.inp[i]);
     
-  Serial.println('|');
+  Serial3.println('|');
 }
 
 #endif

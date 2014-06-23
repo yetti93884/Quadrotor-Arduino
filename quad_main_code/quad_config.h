@@ -20,6 +20,7 @@
 #define EMERGENCY_STOP '!'
 #define CONTROL_RESTART '?'
 
+#define VERSION "v0.3"
 /* set the settings for the IMU here*/
 void initializeIMU();
 

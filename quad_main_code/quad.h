@@ -419,12 +419,18 @@ void parseMessage()
   }
   
   if (in_string.equals("SEND_BINARY")) {
+    Serial3.println("Sending data in Binary format");
     FLAG_VALID_INP = true;
     FLAG_SEND_DATA = true;
   }
   if (in_string.equals("STOP_BINARY")) {
     FLAG_VALID_INP = true;
     FLAG_SEND_DATA = false;
+  }
+  if (in_string.equals("VERSION")) {
+    FLAG_VALID_INP = true;
+    Serial3.print("Quadcopter IITK ");
+    Serial3.println(VERSION);
   }
   /////////////////////////////////////////////////////
   
@@ -769,45 +775,26 @@ void getPWM() {
 }
 
 void sendDataMRF(int del_t)                                              //sends the IMU data and motor PWMs via 
-{                                                               //Serial3(xbee) in MRF(MATLAB Readable Format)
-  float_num roll,pitch,yaw;
-  int_num m1,m2,m3,m4,delT;
-  
-  roll.val = q_Euler[2];
-  pitch.val = q_Euler[1];
-  yaw.val = q_Euler[0];
-  
-  m1.val = motor_front_pwm;
-  m2.val = motor_back_pwm;
-  m3.val = motor_left_pwm;
-  m4.val = motor_right_pwm;
-  delT.val = del_t;
-
+{                                                               //Serial(xbee) in MRF(MATLAB Readable Format)
   Serial3.print('$');              //message start character
   
-  for(int i=0;i<INT_SIZE;i++)    //sending delta time between two executions
-    Serial3.write(delT.inp[i]);
+  Serial3.print(del_t);    //sending delta time between two executions
+  Serial3.print(',');
   
-  for(int i=0;i<FLOAT_SIZE;i++)  //sending yaw
-    Serial3.write(yaw.inp[i]);
-  
-  for(int i=0;i<FLOAT_SIZE;i++)  //sending pitch
-    Serial3.write(pitch.inp[i]);
-  
-  for(int i=0;i<FLOAT_SIZE;i++)  //sending roll
-    Serial3.write(roll.inp[i]);
+  Serial3.print(q_Euler[0],3);  //sending yaw
+  Serial3.print(',');
+  Serial3.print(q_Euler[1],3);  //sending pitch  
+  Serial3.print(',');
+  Serial3.print(q_Euler[2],3);    //sending roll
+  Serial3.print(',');
     
-  for(int i=0;i<INT_SIZE;i++)    //sending front PWM
-    Serial3.write(m1.inp[i]);
-    
-  for(int i=0;i<INT_SIZE;i++)    //sending back PWM
-    Serial3.write(m2.inp[i]);
-  
-  for(int i=0;i<INT_SIZE;i++)    //sending left PWM
-    Serial3.write(m3.inp[i]);
-    
-  for(int i=0;i<INT_SIZE;i++)    //sending right PWM
-    Serial3.write(m4.inp[i]);
+  Serial3.print(motor_front_pwm);    //sending front PWM
+  Serial3.print(',');
+  Serial3.print(motor_back_pwm);    //sending back PWM
+  Serial3.print(',');
+  Serial3.print(motor_left_pwm);    //sending left PWM  
+  Serial3.print(',');
+  Serial3.print(motor_right_pwm);    //sending right PWM
     
   Serial3.println('|');
 }

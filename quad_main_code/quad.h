@@ -4,6 +4,12 @@
 #include <Arduino.h>
 #include "quad_config.h"
 
+/////////// Control Execution Constants  ///////////////////
+boolean USER_OVERRIDE = false;    // turns true on emergency stop which disable controller to set pwms anymore.
+boolean FLAG_SEND_DATA = false;   // turns on sending data in MRF format
+
+////////////////////////////////////////////////////////////
+
 /////////// Joystick variables /////////////////////////////
 
 char joystick[3][10];
@@ -12,7 +18,8 @@ char joystick_bla;
 int index1;
 int j_index = 0;
 
-#define FLOAT_SIZE 4 
+#define FLOAT_SIZE 4
+#define INT_SIZE 4
 
 union float_num
 {
@@ -23,6 +30,11 @@ union float_num
 float_num command_roll,command_pitch,command_thrust;
  
 ////////////////////////////////////////////////////////////
+union int_num
+{
+  char inp[INT_SIZE];
+  int val;
+}junk_num;
 
 /////////// IMU variables /////////////////////////////////
 char IMU[4][100];
@@ -69,7 +81,7 @@ int last_pos_update = millis();    // time when last position update is carried 
 Timer t;
 float pose_dt = 0.0;
 float position_dt = 0.0;
-boolean USER_OVERRIDE = false;    // turns true on emergency stop which disable controller to set pwms anymore.
+
 
 ///////////////Control Parameters//////////////////////////
 float pose[3] = {0.0, 0.0, 0.0}; // yaw pitch roll
@@ -404,6 +416,15 @@ void parseMessage()
     Serial3.print(alpha8);
     Serial3.println();
   }
+  
+  if (in_string.equals("SEND_BINARY")) {
+    FLAG_VALID_INP = true;
+    FLAG_SEND_DATA = true;
+  }
+  if (in_string.equals("STOP_BINARY")) {
+    FLAG_VALID_INP = true;
+    FLAG_SEND_DATA = false;
+  }
   /////////////////////////////////////////////////////
   
   ////////////CHECKING IF THE INPUT IS VALID///////////
@@ -732,6 +753,50 @@ void getPWM() {
   Serial.print(motor_right_pwm);  //9  -> right
   Serial.print(" ");
   Serial.println(motor_left_pwm);  //8  -> left
+}
+
+void sendDataMRF(int del_t)                                              //sends the IMU data and motor PWMs via 
+{                                                               //Serial3(xbee) in MRF(MATLAB Readable Format)
+  float_num roll,pitch,yaw;
+  int_num m1,m2,m3,m4,delT;
+  
+  roll.val = q_Euler[2];
+  pitch.val = q_Euler[1];
+  yaw.val = q_Euler[0];
+  
+  m1.val = motor_front_pwm;
+  m2.val = motor_back_pwm;
+  m3.val = motor_left_pwm;
+  m4.val = motor_right_pwm;
+  delT.val = del_t;
+
+  Serial.print('$');              //message start character
+  
+  for(int i=0;i<INT_SIZE;i++)    //sending delta time between two executions
+    Serial.write(delT.inp[i]);
+  
+  for(int i=0;i<FLOAT_SIZE;i++)  //sending yaw
+    Serial.write(yaw.inp[i]);
+  
+  for(int i=0;i<FLOAT_SIZE;i++)  //sending pitch
+    Serial.write(pitch.inp[i]);
+  
+  for(int i=0;i<FLOAT_SIZE;i++)  //sending roll
+    Serial.write(roll.inp[i]);
+    
+  for(int i=0;i<INT_SIZE;i++)    //sending front PWM
+    Serial.write(m1.inp[i]);
+    
+  for(int i=0;i<INT_SIZE;i++)    //sending back PWM
+    Serial.write(m2.inp[i]);
+  
+  for(int i=0;i<INT_SIZE;i++)    //sending left PWM
+    Serial.write(m3.inp[i]);
+    
+  for(int i=0;i<INT_SIZE;i++)    //sending right PWM
+    Serial.write(m4.inp[i]);
+    
+  Serial.println('|');
 }
 
 #endif

@@ -81,5 +81,8 @@ void executeController();
 /* Evaluates PWM signal based on U1, U2, U3, U4 */
 void getPWM();
 
+/*sends the IMU data and motor PWMs via Serial3(xbee) in MRF(MATLAB Readable Format)*/
+void sendDataMRF();                                              
+
 #endif
 

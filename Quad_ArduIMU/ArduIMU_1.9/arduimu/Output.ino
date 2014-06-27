@@ -1,12 +1,14 @@
 
-void printdata(void)
+void printdata(float delT)
 {    
 
-#if PRINT_BINARY != 1  //Print either Ascii or binary messages
+if (PRINT_BINARY != 1) {  //Print either Ascii or binary messages
 
+        #if PRINT_QUAD != 1
 	Serial.print("!!!VER:");
 	Serial.print(SOFTWARE_VER);  //output the software version
 	Serial.print(",");
+        #endif
 	
 	#if PRINT_ANALOGS==1
 		Serial.print("AN0:");
@@ -57,6 +59,19 @@ void printdata(void)
 		Serial.print((imu_health>>8)&0xff);
 		Serial.print (",");
 	#endif
+
+        #if PRINT_QUAD == 1      // prints quaternions in the format quad_main_code expects.
+                float q0, q1, q2, q3;
+                Quaternion_from_euler(roll, pitch, yaw, &q0, &q1, &q2, &q3);
+		Serial.print(serialFloatPrint(q0));
+                Serial.print(",");
+		Serial.print(serialFloatPrint(q1));
+                Serial.print(",");
+		Serial.print(serialFloatPrint(q2));
+                Serial.print(",");
+                Serial.print(serialFloatPrint(q3));
+                Serial.print(":");
+        #endif
       
 	#if PRINT_MAGNETOMETER == 1
                 #if BOARD_VERSION < 3
@@ -119,11 +134,14 @@ void printdata(void)
 		}
 	#endif
       
+        #if PRINT_QUAD != 1
 	Serial.print("TOW:");
 	Serial.print(GPS.time);
-	Serial.println("***");    
-
-#else
+	Serial.println("***"); 
+        #endif
+}
+else {
+       #if PRINT_QUAD_BINARY ==0
 	//  This section outputs binary data messages
 	//  Conforms to new binary message standard (12/31/09)
 	byte IMU_buffer[22];
@@ -222,8 +240,29 @@ void printdata(void)
 		Serial.print(IMU_ck_b);
           
     }
-        
-#endif  
+        #endif
+        #if PRINT_QUAD_BINARY == 1
+            float q0, q1, q2, q3;
+            Quaternion_from_euler(roll, pitch, yaw, &q0, &q1, &q2, &q3);
+            Serial.print(serialFloatPrint(q0));
+            Serial.print(",");
+	    Serial.print(serialFloatPrint(q1));
+            Serial.print(",");
+	    Serial.print(serialFloatPrint(q2));
+            Serial.print(",");
+            Serial.print(serialFloatPrint(q3));
+            Serial.print(":");
+//              Serial.print('$');
+//              Serial.print(yaw);
+//              Serial.print(',');
+//              Serial.print(pitch);
+//              Serial.print(',');
+//              Serial.print(roll);
+//              Serial.print(',');
+//            Serial.println(delT,3);
+        #endif
+}
+
 }
 
 #if PERFORMANCE_REPORTING == 1
@@ -315,4 +354,43 @@ long convert_to_dec(float x)
 {
   return x*10000000;
 }
+
+String serialFloatPrint(float f) {
+  String s ("");
+  byte * b = (byte *) &f;
+  //printf("%u %u %u %u\n", b[0], b[1], b[2], b[3]);
+  int i;
+  for(i=0; i<4; i++) {
+    
+    byte b1 = (b[i] >> 4) & 0x0f;
+    byte b2 = (b[i] & 0x0f);
+    
+    char c1 = (b1 < 10) ? ('0' + b1) : 'A' + b1 - 10;
+    char c2 = (b2 < 10) ? ('0' + b2) : 'A' + b2 - 10;
+    
+    //printf("%c", c1);
+    //printf("%c", c2);
+    //printf("\n");
+    s += c1;
+    s += c2;
+  }
+  //cout << s << endl;
+  return s;
+}
+
+void Quaternion_from_euler(float roll, float pitch, float yaw, float *q0, float *q1, float *q2, float *q3)
+{
+    float cr2 = cos(roll*0.5);
+    float cp2 = cos(pitch*0.5);
+    float cy2 = cos(yaw*0.5);
+    float sr2 = sin(roll*0.5);
+    float sp2 = sin(pitch*0.5);
+    float sy2 = sin(yaw*0.5);
+
+    *q0 = cr2*cp2*cy2 + sr2*sp2*sy2;
+    *q1 = sr2*cp2*cy2 - cr2*sp2*sy2;
+    *q2 = cr2*sp2*cy2 + sr2*cp2*sy2;
+    *q3 = cr2*cp2*sy2 - sr2*sp2*cy2;    
+}
+
 

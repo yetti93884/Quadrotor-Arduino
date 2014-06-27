@@ -8,7 +8,7 @@
 
 #define MOTOR_PWM_MIN 900
 #define MOTOR_ARM_PWM 800
-#define MOTOR_PWM_MAX 1300
+#define MOTOR_PWM_MAX 1500
 
 
 #define JOYSTICK_START '$'

@@ -67,7 +67,7 @@ int motor_right_pwm;
 int motor_front_pwm;
 int motor_back_pwm;
 
-float thrust_pwm_constant = 1.846;    // Thrust = 1.846*(pwm - 819.6)
+float thrust_pwm_constant = 1.846/4;    // Thrust = 1.846*(pwm - 819.6)
 float torque_pwm_constant = 1.858;  // scaled by 10**4
 int thrust_pwm_min = (int)900;  //900 is good
 int torque_pwm_min = (int)1144.24;
@@ -92,12 +92,12 @@ float quad_position[3];        //x,y,z
 float velocities[3];
 
 float speeds[4];
-float alpha1 = 0.1;
-float alpha2 = 0.1;
+float alpha1 = 1.0;
+float alpha2 = 0.01;
 float alpha3 = 0.1;
 float alpha4 = 0.1;
-float alpha5 = 2.5;
-float alpha6 = 1.5;
+float alpha5 = 1000.0;
+float alpha6 = 0.001;
 float alpha7 = 0.1;
 float alpha8 = 0.1;
 float U1, U2, U3, U4;
@@ -223,13 +223,13 @@ void parseMessage()
   boolean FLAG_STR_END = false;
   boolean FLAG_INP_ERROR = false;
   boolean FLAG_VALID_INP = false;
-  int decimal_count = 0;
+  int decimal_count = -1;
   int inp;
   
   delay(2);
   //////////////READING THE INPUT//////////////
   while(Serial3.available()>0)
-  {  
+  {    
     char in_char = Serial3.read();
   
     if((in_char != ' ')&& FLAG_STR_END==false)
@@ -244,6 +244,8 @@ void parseMessage()
     {
       if(isDigit(in_char)) {
         in_num = in_num*10 + (in_char-'0');
+        if(decimal_count>=0)
+          decimal_count++;
       }
       else if (in_char == '.')
         decimal_count++;
@@ -254,7 +256,7 @@ void parseMessage()
   }
   
   in_float = in_num/pow(10.0, decimal_count);
-  decimal_count = 0;
+  decimal_count = -1;
   
   //////////////////////////////////////////////////
   
@@ -400,21 +402,21 @@ void parseMessage()
   {
     FLAG_VALID_INP = true;
     Serial3.print("Alphas: ");
-    Serial3.print(alpha1);
+    Serial3.print(alpha1,3);
     Serial3.print(" ");
-    Serial3.print(alpha2);
+    Serial3.print(alpha2,3);
     Serial3.print(" ");
-    Serial3.print(alpha3);
+    Serial3.print(alpha3,3);
     Serial3.print(" ");
-    Serial3.print(alpha4);
+    Serial3.print(alpha4,3);
     Serial3.print(" ");
-    Serial3.print(alpha5);
+    Serial3.print(alpha5,3);
     Serial3.print(" ");
-    Serial3.print(alpha6);
+    Serial3.print(alpha6,3);
     Serial3.print(" ");
-    Serial3.print(alpha7);
+    Serial3.print(alpha7,3);
     Serial3.print(" ");
-    Serial3.print(alpha8);
+    Serial3.print(alpha8,3);
     Serial3.println();
   }
   
@@ -737,7 +739,8 @@ void executeController() {  //psi,theta,phi  x,y,z
   **********************************************/
   
   U1 = m*9.8;	// only yaw control
-  U2 = U3 = 0.0;	// only yaw control
+   
+  U3 = 0.0;	// only yaw control
 }
 
 void getPWM() {
@@ -787,7 +790,15 @@ void sendDataMRF(int del_t)                                              //sends
   Serial3.print(',');
   Serial3.print(q_Euler[2],3);    //sending roll
   Serial3.print(',');
-    
+  
+//  Serial3.print(U1);
+//  Serial3.print(',');
+//  Serial3.print(U2);  
+//  Serial3.print(',');
+//  Serial3.print(U3);
+//  Serial3.print(',');
+//  Serial3.print(U1);
+//  Serial3.print(',');
   Serial3.print(motor_front_pwm);    //sending front PWM
   Serial3.print(',');
   Serial3.print(motor_back_pwm);    //sending back PWM

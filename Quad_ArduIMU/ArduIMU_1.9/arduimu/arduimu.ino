@@ -41,22 +41,25 @@
 #define SPEEDFILT 2 // >1 use min speed filter for yaw drift cancellation (m/s), 0=do not use speed filter
 
 /*For debugging propurses*/
-#define PRINT_DEBUG 1   //Will print Debug messages
+#define PRINT_DEBUG 0   //Will print Debug messages
 
 //OUTPUTMODE=1 will print the corrected data, 0 will print uncorrected data of the gyros (with drift), 2 will print accelerometer only data
 #define OUTPUTMODE 1
 
 #define PRINT_DCM 0     //Will print the whole direction cosine matrix
 #define PRINT_ANALOGS 0 //Will print the analog raw data
-#define PRINT_EULER 1   //Will print the Euler angles Roll, Pitch and Yaw
+#define PRINT_EULER 0   //Will print the Euler angles Roll, Pitch and Yaw
+#define PRINT_QUAD 0   //Will print the Euler angles Roll, Pitch and Yaw in HEX
+#define PRINT_QUAD_BINARY 1  //will print data as in PRINT_QUAD but at 50Hz
 #define PRINT_GPS 0     //Will print GPS data
 #define PRINT_MAGNETOMETER 0     //Will print Magnetometer data (if magnetometer is enabled)
 
+
 // *** NOTE!   To use ArduIMU with ArduPilot you must select binary output messages (change to 1 here)
-#define PRINT_BINARY 0  //Will print binary message and suppress ASCII messages (above)
+#define PRINT_BINARY 1  //Will print binary message and suppress ASCII messages (above)
 
 // *** NOTE!   Performance reporting is only supported for Ublox.  Set to 0 for others
-#define PERFORMANCE_REPORTING 1  //Will include performance reports in the binary output ~ 1/2 min
+#define PERFORMANCE_REPORTING 0  //Will include performance reports in the binary output ~ 1/2 min
 
 /* Support for optional magnetometer (1 enabled, 0 dissabled) */
 #define USE_MAGNETOMETER 1 // use 1 if you want to make yaw gyro drift corrections using the optional magnetometer   
@@ -256,7 +259,7 @@ volatile uint8_t analog_count[8];
 //*****************************************************************************************
 void setup()
 { 
-  Serial.begin(38400, 128, 16);
+  Serial.begin(115200, 128, 16);
   pinMode(SERIAL_MUX_PIN,OUTPUT); //Serial Mux
   if (GPS_CONNECTION == 0){
     digitalWrite(SERIAL_MUX_PIN,HIGH); //Serial Mux
@@ -300,7 +303,6 @@ void setup()
   #if BOARD_VERSION == 2
   debug_print("You are using Hardware Version 2...");
   #endif 
-  
   GPS.init();			// GPS Initialization
   
   debug_handler(0);		//Printing version
@@ -375,7 +377,7 @@ void loop() //Main Loop
     //Serial.println();
     
     #if PRINT_BINARY == 1
-      printdata(); //Send info via serial
+      printdata(G_Dt); //Send info via serial
     #endif
 
     //Turn on the LED when you saturate any of the gyros.
@@ -471,7 +473,7 @@ void loop() //Main Loop
 				cycleCount = -1;
 		// Reset case counter, will be incremented to zero before switch statement
 				#if !PRINT_BINARY
-					printdata(); //Send info via serial
+					printdata(G_Dt); //Send info via serial
 				#endif
 				break;
 		}
@@ -544,7 +546,9 @@ void startup_ground(void)
   
 	for(int y=0; y<=5; y++)
 	{
+                #if PRINT_QUAD != 1
 		Serial.println(AN_OFFSET[y]);
+                #endif
                 #if BOARD_VERSION < 3
 		store = ((AN_OFFSET[y]-200.f)*100.0f);
                 #endif

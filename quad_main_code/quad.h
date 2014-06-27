@@ -223,6 +223,8 @@ void parseMessage()
   boolean FLAG_STR_END = false;
   boolean FLAG_INP_ERROR = false;
   boolean FLAG_VALID_INP = false;
+  boolean FLAG_PRINT_CONTROL_PARAM = false;
+
   int decimal_count = -1;
   int inp;
   
@@ -262,9 +264,10 @@ void parseMessage()
   
   ////////COMPARING WITH EXISTING COMMANDS//////////
 
-  if(in_string.equals("LEFT"))
+  if(in_string.equals("left"))
   {
     FLAG_VALID_INP = true;
+    USER_OVERRIDE = true;
     if(in_num>=MOTOR_PWM_MIN && in_num<=MOTOR_PWM_MAX) {
       motor_left_pwm = in_num;
     }
@@ -278,9 +281,10 @@ void parseMessage()
   }
   
 
-  if(in_string.equals("RIGHT"))
+  if(in_string.equals("right"))
   {
     FLAG_VALID_INP = true;
+    USER_OVERRIDE = true;
     if(in_num>=MOTOR_PWM_MIN && in_num<=MOTOR_PWM_MAX) {
       motor_right_pwm = in_num;
     }
@@ -292,9 +296,10 @@ void parseMessage()
     }
   }
 
-  if(in_string.equals("FRONT"))
+  if(in_string.equals("front"))
   {
     FLAG_VALID_INP = true;
+    USER_OVERRIDE = true;
     if(in_num>=MOTOR_PWM_MIN && in_num<=MOTOR_PWM_MAX) {
       motor_front_pwm = in_num;
     }
@@ -306,9 +311,10 @@ void parseMessage()
     }
   }
 
-  if(in_string.equals("BACK"))
+  if(in_string.equals("back"))
   {
     FLAG_VALID_INP = true;
+    USER_OVERRIDE = true;
     if(in_num>=MOTOR_PWM_MIN && in_num<=MOTOR_PWM_MAX) {
       motor_back_pwm = in_num;
     }
@@ -320,9 +326,10 @@ void parseMessage()
     }
   }
 
-  if(in_string.equals("ALL"))
+  if(in_string.equals("all"))
   {
     FLAG_VALID_INP = true;
+    USER_OVERRIDE = true;
     int pwm_val = MOTOR_PWM_MIN;
     if(in_num>=MOTOR_PWM_MIN && in_num<=MOTOR_PWM_MAX) {
       pwm_val = in_num;
@@ -339,97 +346,74 @@ void parseMessage()
     motor_back_pwm = pwm_val;
   }
   
-  if (in_string.equals("ALPHA1")) {
+  if (in_string.equals("alpha1")) {
     FLAG_VALID_INP = true;
+    FLAG_PRINT_CONTROL_PARAM = true;
     alpha1 = in_float;
   }
   
-  if (in_string.equals("ALPHA2")) {
+  if (in_string.equals("alpha2")) {
     FLAG_VALID_INP = true;
+    FLAG_PRINT_CONTROL_PARAM = true;
     alpha2 = in_float;
   }
   
-  if (in_string.equals("ALPHA3")) {
+  if (in_string.equals("alpha3")) {
     FLAG_VALID_INP = true;
+    FLAG_PRINT_CONTROL_PARAM = true;
     alpha3 = in_float;
   }
   
-  if (in_string.equals("ALPHA4")) {
+  if (in_string.equals("alpha4")) {
     FLAG_VALID_INP = true;
+    FLAG_PRINT_CONTROL_PARAM = true;
     alpha4 = in_float;
   }
   
-  if (in_string.equals("ALPHA5")) {
+  if (in_string.equals("alpha5")) {
     FLAG_VALID_INP = true;
+    FLAG_PRINT_CONTROL_PARAM = true;
     alpha5 = in_float;
   }
   
-  if (in_string.equals("ALPHA6")) {
+  if (in_string.equals("alpha6")) {
     FLAG_VALID_INP = true;
+    FLAG_PRINT_CONTROL_PARAM = true;
     alpha6 = in_float;
   }
   
-  if (in_string.equals("ALPHA7")) {
+  if (in_string.equals("alpha7")) {
     FLAG_VALID_INP = true;
+    FLAG_PRINT_CONTROL_PARAM = true;
     alpha7 = in_float;
   }
   
-  if (in_string.equals("ALPHA8")) {
+  if (in_string.equals("alpha8")) {
     FLAG_VALID_INP = true;
+    FLAG_PRINT_CONTROL_PARAM = true;
     alpha8 = in_float;
   }
   
-  Serial.println();
-  Serial.print("Alphas: ");
-  Serial.print(alpha1);
-  Serial.print(" ");
-  Serial.print(alpha2);
-  Serial.print(" ");
-  Serial.print(alpha3);
-  Serial.print(" ");
-  Serial.print(alpha4);
-  Serial.print(" ");
-  Serial.print(alpha5);
-  Serial.print(" ");
-  Serial.print(alpha6);
-  Serial.print(" ");
-  Serial.print(alpha7);
-  Serial.print(" ");
-  Serial.print(alpha8);
-  Serial.println();
-    
-  if(in_string.equals("SHOW"))
+  if(FLAG_PRINT_CONTROL_PARAM == true)
   {
+    showControlParams();
+  }  
+  if(in_string.equals("show"))
+  {
+    showControlParams();
     FLAG_VALID_INP = true;
-    Serial3.print("Alphas: ");
-    Serial3.print(alpha1,3);
-    Serial3.print(" ");
-    Serial3.print(alpha2,3);
-    Serial3.print(" ");
-    Serial3.print(alpha3,3);
-    Serial3.print(" ");
-    Serial3.print(alpha4,3);
-    Serial3.print(" ");
-    Serial3.print(alpha5,3);
-    Serial3.print(" ");
-    Serial3.print(alpha6,3);
-    Serial3.print(" ");
-    Serial3.print(alpha7,3);
-    Serial3.print(" ");
-    Serial3.print(alpha8,3);
-    Serial3.println();
   }
   
-  if (in_string.equals("SEND_BINARY")) {
+  if (in_string.equals("send_binary")) {
     Serial3.println("Sending data in Binary format");
     FLAG_VALID_INP = true;
     FLAG_SEND_DATA = true;
   }
-  if (in_string.equals("STOP_BINARY")) {
+  if (in_string.equals("stop_binary")) {
     FLAG_VALID_INP = true;
     FLAG_SEND_DATA = false;
   }
-  if (in_string.equals("VERSION")) {
+  if (in_string.equals("version")) {
     FLAG_VALID_INP = true;
     Serial3.print("Quadcopter IITK ");
     Serial3.println(VERSION);
@@ -799,15 +783,34 @@ void sendDataMRF(int del_t)                                              //sends
 //  Serial3.print(',');
 //  Serial3.print(U1);
 //  Serial3.print(',');
-  Serial3.print(motor_front_pwm);    //sending front PWM
+  Serial3.print(motor_front_pwm+100);    //sending front PWM
   Serial3.print(',');
   Serial3.print(motor_back_pwm);    //sending back PWM
   Serial3.print(',');
-  Serial3.print(motor_left_pwm);    //sending left PWM  
+  Serial3.print(motor_left_pwm+100);    //sending left PWM  
   Serial3.print(',');
   Serial3.print(motor_right_pwm);    //sending right PWM
     
   Serial3.println('|');
 }
-
+void showControlParams()
+{
+      Serial3.print("Alphas: ");
+    Serial3.print(alpha1,3);
+    Serial3.print(" ");
+    Serial3.print(alpha2,3);
+    Serial3.print(" ");
+    Serial3.print(alpha3,3);
+    Serial3.print(" ");
+    Serial3.print(alpha4,3);
+    Serial3.print(" ");
+    Serial3.print(alpha5,3);
+    Serial3.print(" ");
+    Serial3.print(alpha6,3);
+    Serial3.print(" ");
+    Serial3.print(alpha7,3);
+    Serial3.print(" ");
+    Serial3.print(alpha8,3);
+    Serial3.println();
+}
 #endif

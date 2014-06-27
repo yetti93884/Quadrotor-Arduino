@@ -83,7 +83,10 @@ void executeController();
 void getPWM();
 
 /*sends the IMU data and motor PWMs via Serial3(xbee) in MRF(MATLAB Readable Format)*/
-void sendDataMRF();                                              
+void sendDataMRF();  
+
+/*shows the control parameters on Serial Port3*/
+void showControlParams();
 
 #endif
 

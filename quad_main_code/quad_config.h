@@ -10,6 +10,8 @@
 #define MOTOR_ARM_PWM 800
 #define MOTOR_PWM_MAX 1500
 
+#define CONTROLLER_PARAM_ADDRESS_START 0
+#define CONTROLLER_PARAM_COUNT 8
 
 #define JOYSTICK_START '$'
 #define JOYSTICK_END ':'
@@ -87,6 +89,12 @@ void sendDataMRF();
 
 /*shows the control parameters on Serial Port3*/
 void showControlParams();
+
+/*writes the current Control Parameters to EEPROM*/
+void writeParamToEEPROM();
+
+/*reads the parameters from EEPROM to global variables*/
+void readParamFromEEPROM();
 
 #endif
 

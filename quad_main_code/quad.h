@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include "quad_config.h"
+#include <EEPROM.h>
 
 /////////// Control Execution Constants  ///////////////////
 boolean USER_OVERRIDE = false;    // turns true on emergency stop which disable controller to set pwms anymore.
@@ -223,7 +224,7 @@ void parseMessage()
   boolean FLAG_STR_END = false;
   boolean FLAG_INP_ERROR = false;
   boolean FLAG_VALID_INP = false;
-  boolean FLAG_PRINT_CONTROL_PARAM = false;
+  boolean FLAG_SET_CONTROL_PARAM = false;
 
   int decimal_count = -1;
   int inp;
@@ -348,54 +349,55 @@ void parseMessage()
   
   if (in_string.equals("alpha1")) {
     FLAG_VALID_INP = true;
-    FLAG_PRINT_CONTROL_PARAM = true;
+    FLAG_SET_CONTROL_PARAM = true;
     alpha1 = in_float;
   }
   
   if (in_string.equals("alpha2")) {
     FLAG_VALID_INP = true;
-    FLAG_PRINT_CONTROL_PARAM = true;
+    FLAG_SET_CONTROL_PARAM = true;
     alpha2 = in_float;
   }
   
   if (in_string.equals("alpha3")) {
     FLAG_VALID_INP = true;
-    FLAG_PRINT_CONTROL_PARAM = true;
+    FLAG_SET_CONTROL_PARAM = true;
     alpha3 = in_float;
   }
   
   if (in_string.equals("alpha4")) {
     FLAG_VALID_INP = true;
-    FLAG_PRINT_CONTROL_PARAM = true;
+    FLAG_SET_CONTROL_PARAM = true;
     alpha4 = in_float;
   }
   
   if (in_string.equals("alpha5")) {
     FLAG_VALID_INP = true;
-    FLAG_PRINT_CONTROL_PARAM = true;
+    FLAG_SET_CONTROL_PARAM = true;
     alpha5 = in_float;
   }
   
   if (in_string.equals("alpha6")) {
     FLAG_VALID_INP = true;
-    FLAG_PRINT_CONTROL_PARAM = true;
+    FLAG_SET_CONTROL_PARAM = true;
     alpha6 = in_float;
   }
   
   if (in_string.equals("alpha7")) {
     FLAG_VALID_INP = true;
-    FLAG_PRINT_CONTROL_PARAM = true;
+    FLAG_SET_CONTROL_PARAM = true;
     alpha7 = in_float;
   }
   
   if (in_string.equals("alpha8")) {
     FLAG_VALID_INP = true;
-    FLAG_PRINT_CONTROL_PARAM = true;
+    FLAG_SET_CONTROL_PARAM = true;
     alpha8 = in_float;
   }
   
-  if(FLAG_PRINT_CONTROL_PARAM == true)
+  if(FLAG_SET_CONTROL_PARAM == true)
   {
+    writeParamToEEPROM();
     showControlParams();
   }  
   if(in_string.equals("show"))
@@ -813,4 +815,57 @@ void showControlParams()
     Serial3.print(alpha8,3);
     Serial3.println();
 }
+
+void readParamFromEEPROM()
+{
+  int address;
+  float_num params[CONTROLLER_PARAM_COUNT];
+  byte val;
+  
+  for(int i=0;i<CONTROLLER_PARAM_COUNT;i++)
+  {
+    for(int j=0;j<FLOAT_SIZE;j++)
+     {
+       address = CONTROLLER_PARAM_ADDRESS_START + i*FLOAT_SIZE + j;
+       val = EEPROM.read(address);
+       params[i].inp[j] = val;
+     } 
+  }
+  
+  alpha1 = params[0].val;
+  alpha2 = params[1].val;
+  alpha3 = params[2].val;
+  alpha4 = params[3].val;
+  alpha5 = params[4].val;
+  alpha6 = params[5].val;
+  alpha7 = params[6].val;
+  alpha8 = params[7].val;
+}
+
+void writeParamToEEPROM()
+{
+  int address;
+  float_num params[CONTROLLER_PARAM_COUNT];
+  byte val;
+
+  params[0].val = alpha1;
+  params[1].val = alpha2;
+  params[2].val = alpha3;
+  params[3].val = alpha4;
+  params[4].val = alpha5;
+  params[5].val = alpha6;
+  params[6].val = alpha7;
+  params[7].val = alpha8;
+  
+  for(int i=0;i<CONTROLLER_PARAM_COUNT;i++)
+  {
+    for(int j=0;j<FLOAT_SIZE;j++)
+     {
+       address = CONTROLLER_PARAM_ADDRESS_START + i*FLOAT_SIZE + j;
+       val = params[i].inp[j];
+       EEPROM.write(address, val);
+     } 
+  }  
+}
+
 #endif

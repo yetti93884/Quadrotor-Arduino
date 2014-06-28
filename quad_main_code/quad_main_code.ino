@@ -5,6 +5,7 @@
 
 #include <Wire.h>
 #include <Servo.h>
+#include <EEPROM.h>
 #include "Timer.h"
 
 #include "quad.h"
@@ -28,6 +29,8 @@ void setup() {
   
   initializeIMU();
   initializeMotors();
+  
+  readParamFromEEPROM();
   delay(10000);
   
   timeOld = millis();

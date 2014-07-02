@@ -14,3 +14,6 @@ Quadrotor-Arduino
 2] quad_main_code has some major changes in form of additional control code 
 and xbee online parameter tuning. But it is recommended to read through the 
 entire code as it is not STABLE.
+
+3] ArduIMU startup time ~= 21s
+4] Motors ARM time ~= 7s

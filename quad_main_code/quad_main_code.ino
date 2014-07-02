@@ -62,11 +62,11 @@ void loop() {
       updateControlParams();                                      // Updates parameters used by control algo
       executeController();                                        // Evaluates the control inputs U1, U2, U3, U4
       getPWM();                                                   // Evaluates PWM signal based on U1, U2, U3, U4
-      if(FLAG_SEND_DATA == true)
-      {
+    }
+    if(FLAG_SEND_DATA == true)
+    {
         sendDataMRF(delT);                                              //sends the IMU data and motor PWMs via 
         //Serial3(xbee) in MRF(MATLAB Readable Format)
-      }
     }
     
     updateMotors();                                             // Provides PWM signal

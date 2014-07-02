@@ -208,12 +208,14 @@ void parseSerialInput()
         {
           Serial3.println("EMERGENCY STOP FOR MOTORS");
           USER_OVERRIDE = true;
+          FLAG_SEND_DATA = false;
           stopMotors();
         }
      else if(in_char == CONTROL_RESTART)
        {
           Serial3.println("CONTROL RESTART FOR MOTORS");
           USER_OVERRIDE = false;
+          
           //updateMotors();
        }
    }
@@ -712,6 +714,7 @@ void executeController() {  //psi,theta,phi  x,y,z
   U3 = (z3 - a3*angularrates[2]*angularrates[0] - alpha3*(z4+alpha3*z3) - alpha4*z4)/b2;
   U4 = (z5 - a5*angularrates[1]*angularrates[2] - alpha5*(z6+alpha5*z5) - alpha6*z6)/b3;
   
+  
   /***********COMMENTED by atulya**************
   because it increases control loop time to 23ms instead of 20ms
   Serial.print("Control Inputs:  ");
@@ -725,7 +728,7 @@ void executeController() {  //psi,theta,phi  x,y,z
   **********************************************/
   
   U1 = m*9.8;	// only yaw control
-   
+  U2 = 0;
   U3 = 0.0;	// only yaw control
 }
 
@@ -785,11 +788,11 @@ void sendDataMRF(int del_t)                                              //sends
 //  Serial3.print(',');
 //  Serial3.print(U1);
 //  Serial3.print(',');
-  Serial3.print(motor_front_pwm+100);    //sending front PWM
+  Serial3.print(motor_front_pwm);    //sending front PWM
   Serial3.print(',');
   Serial3.print(motor_back_pwm);    //sending back PWM
   Serial3.print(',');
-  Serial3.print(motor_left_pwm+100);    //sending left PWM  
+  Serial3.print(motor_left_pwm);    //sending left PWM  
   Serial3.print(',');
   Serial3.print(motor_right_pwm);    //sending right PWM
     

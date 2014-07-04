@@ -104,10 +104,10 @@ float alpha8 = 0.1;
 float U1, U2, U3, U4;
 
 /////////////Physical Parameters//////////////////////////
-float m = 1.1;
+float m = 1.4;
 float g = 9.8;
-float Ixx = 0.043675;//0.0085;
-float Iyy = 0.043675;//0.0085;
+float Ixx = 0.043675;//
+float Iyy = 0.043675;//
 float Izz = 0.082800;//0.0165;
 float a1 = (Iyy-Izz)/Ixx;
 float a3 = (Izz-Ixx)/Iyy;
@@ -118,7 +118,7 @@ float b3 = 1/Izz;
 ///////////////////////////////////////////////////////////
 
 String in_string = "";    // string to hold input
-int in_num;                // argument to be passed along with the string
+long in_num;                // argument to be passed along with the string
 float in_float = 0.0;            // argument to be passed along with the string
 
 void getInBounds() {
@@ -728,8 +728,9 @@ void executeController() {  //psi,theta,phi  x,y,z
   **********************************************/
   
   U1 = m*9.8;	// only yaw control
-  U2 = 0;
-  U3 = 0.0;	// only yaw control
+//  U2 = 0;
+//  U3 = 0.0;	// only yaw control
+  U4 = 0;
 }
 
 void getPWM() {
@@ -751,7 +752,7 @@ void getPWM() {
     motor_right_pwm = (int)(thrust_pwm_min + 0.5*(0.5*(U1/thrust_pwm_constant - U4*10000/torque_pwm_constant)+U2/thrust_pwm_constant));
     motor_left_pwm = (int)(thrust_pwm_min + 0.5*(0.5*(U1/thrust_pwm_constant - U4*10000/torque_pwm_constant)-U2/thrust_pwm_constant));
     
-    getInBounds();
+   getInBounds();
   }
   
   /***********COMMENTED by atulya**************
@@ -790,9 +791,9 @@ void sendDataMRF(int del_t)                                              //sends
 //  Serial3.print(',');
   Serial3.print(motor_front_pwm);    //sending front PWM
   Serial3.print(',');
-  Serial3.print(motor_back_pwm);    //sending back PWM
+  Serial3.print(motor_left_pwm);    //sending back PWM
   Serial3.print(',');
-  Serial3.print(motor_left_pwm);    //sending left PWM  
+  Serial3.print(motor_back_pwm);    //sending left PWM  
   Serial3.print(',');
   Serial3.print(motor_right_pwm);    //sending right PWM
     

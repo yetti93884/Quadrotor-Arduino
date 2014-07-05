@@ -139,7 +139,7 @@ float b3 = 1/Izz;
 
 
 String in_string = "";    // string to hold input
-int in_num;                // argument to be passed along with the string
+long in_num;                // argument to be passed along with the string
 float in_float = 0.0;            // argument to be passed along with the string
 
 void getInBounds() {

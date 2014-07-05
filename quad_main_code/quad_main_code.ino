@@ -31,7 +31,7 @@ void setup() {
   initializeMotors();
   
   readParamFromEEPROM();
-  delay(10000);
+  delay(8000);
   
   timeOld = millis();
   
@@ -77,7 +77,8 @@ void loop() {
     //  printJoyStickInput();                
     //  printIMUReadings();
     //  printMotorPWM();
-    Serial.println(delT);
+    Serial.print(' ');
+    Serial.println(pose_dt,3);
   }
 }
 

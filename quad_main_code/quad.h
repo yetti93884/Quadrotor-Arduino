@@ -68,17 +68,17 @@ int motor_right_pwm;
 int motor_front_pwm;
 int motor_back_pwm;
 
-float thrust_pwm_constant = 1.846/4;    // Thrust = 1.846*(pwm - 819.6)
+float thrust_pwm_constant = 4.5e-3;    // Thrust = 1.846*(pwm - 819.6)
 float torque_pwm_constant = 1.858;  // scaled by 10**4
-int thrust_pwm_min = (int)900;  //900 is good
+int thrust_pwm_min = (int)819.6;  //900 is good
 int torque_pwm_min = (int)1144.24;
 
 /////////////////////////////////////////////////////////// 
 
 
 ///////////////Other operation variables///////////////////
-int last_pose_update = millis();    // time when last pose update is carried out - in milli seconds
-int last_pos_update = millis();    // time when last position update is carried out - in milli seconds
+long last_pose_update = 0;    // time when last pose update is carried out - in milli seconds
+long last_pos_update = 0;    // time when last position update is carried out - in milli seconds
 Timer t;
 float pose_dt = 0.0;
 float position_dt = 0.0;
@@ -104,7 +104,7 @@ float alpha8 = 0.1;
 float U1, U2, U3, U4;
 
 /////////////Physical Parameters//////////////////////////
-float m = 1.4;
+float m = 1.0;
 float g = 9.8;
 float Ixx = 0.043675;//
 float Iyy = 0.043675;//
@@ -547,6 +547,11 @@ void parseIMUInput()
         
     for(int i=0;i<FLOAT_SIZE;i++)
         q3.inp[i] = IMU[3][2*i]*16 + IMU[3][2*i+1];
+        
+    pose_dt = 0.02;
+//    long new_pose_update = millis();
+//    pose_dt = (new_pose_update - last_pose_update)/1000.0;
+//    last_pose_update = new_pose_update;
   }
   
   bla_quaternion[0] = q0.val;
@@ -564,10 +569,7 @@ void parseIMUInput()
     quaternion[3] = bla_quaternion[3];
   }
   
-  quaternionToEuler(quaternion, q_Euler);
-  pose_dt = (millis() - last_pose_update)/1000.0;
-  last_pose_update = millis();
-    
+  quaternionToEuler(quaternion, q_Euler);    
 }
 
 void printJoyStickInput()
@@ -590,7 +592,7 @@ void quaternionToEuler(float *q, float *euler) {
 //  euler[2] = atan2(2 * q[2] * q[3] - 2 * q[0] * q[1], 2 * q[0] * q[0] + 2 * q[3] * q[3] - 1); // phi
   euler[1] = -atan2(2 * q[0] * q[1] + 2 * q[2] * q[3], 1 - 2 * q[1]*q[1] - 2 * q[2] * q[2]); // phi
   euler[2] = -asin(2 * q[0] * q[2] - 2 * q[3] * q[1]); // theta
-  euler[0] = atan2(2 * q[0] * q[3] + 2 * q[1] * q[2], 1 - 2 * q[2] * q[2] - 2 * q[3] * q[3]); // psi
+  euler[0] = -atan2(2 * q[0] * q[3] + 2 * q[1] * q[2], 1 - 2 * q[2] * q[2] - 2 * q[3] * q[3]); // psi
 }
 
 void quatConjugate(float *quat, float *result) {
@@ -729,7 +731,7 @@ void executeController() {  //psi,theta,phi  x,y,z
   
   U1 = m*9.8;	// only yaw control
 //  U2 = 0;
-//  U3 = 0.0;	// only yaw control
+  U3 = 0.0;	// only yaw control
   U4 = 0;
 }
 
@@ -747,10 +749,10 @@ void getPWM() {
   ********************************************/
   
   if (USER_OVERRIDE == false) {
-    motor_front_pwm = (int)(thrust_pwm_min + 0.5*(0.5*(U1/thrust_pwm_constant + U4*10000/torque_pwm_constant)+U3/thrust_pwm_constant));
-    motor_back_pwm = (int)(thrust_pwm_min + 0.5*(0.5*(U1/thrust_pwm_constant + U4*10000/torque_pwm_constant)-U3/thrust_pwm_constant));
-    motor_right_pwm = (int)(thrust_pwm_min + 0.5*(0.5*(U1/thrust_pwm_constant - U4*10000/torque_pwm_constant)+U2/thrust_pwm_constant));
-    motor_left_pwm = (int)(thrust_pwm_min + 0.5*(0.5*(U1/thrust_pwm_constant - U4*10000/torque_pwm_constant)-U2/thrust_pwm_constant));
+    motor_front_pwm = (int)(thrust_pwm_min + 0.5*(0.5*(U1/thrust_pwm_constant - U4*10000/torque_pwm_constant)+U3/thrust_pwm_constant));
+    motor_back_pwm = (int)(thrust_pwm_min + 0.5*(0.5*(U1/thrust_pwm_constant - U4*10000/torque_pwm_constant)-U3/thrust_pwm_constant));
+    motor_right_pwm = (int)(thrust_pwm_min + 0.5*(0.5*(U1/thrust_pwm_constant + U4*10000/torque_pwm_constant)+U2/thrust_pwm_constant));
+    motor_left_pwm = (int)(thrust_pwm_min + 0.5*(0.5*(U1/thrust_pwm_constant + U4*10000/torque_pwm_constant)-U2/thrust_pwm_constant));
     
    getInBounds();
   }

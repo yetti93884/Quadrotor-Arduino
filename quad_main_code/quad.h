@@ -106,6 +106,7 @@ float Nd_theta;
 float Kp_phi;
 float Kd_phi;
 float Nd_phi;
+float Ki_phi;
 
 float e_zhi;
 float e_zhi_prev;
@@ -116,17 +117,12 @@ float e_theta_prev;
 float e_phi;
 float e_phi_prev;
 
-float U1_d;
-float U2_d;
-float U3_d;
-float U4_d;
-
 float U1, U2, U3, U4;
 //////////////////////////////////////////////////////////
 /////////////Physical Parameters//////////////////////////
 float m = 1.1;
 float g = 9.8;
-float Ixx = 0.043675;//0.0085;
+
 float Iyy = 0.043675;//0.0085;
 float Izz = 0.082800;//0.0165;
 float a1 = (Iyy-Izz)/Ixx;
@@ -417,6 +413,11 @@ void parseMessage()
     FLAG_VALID_INP = true;
     FLAG_SET_CONTROL_PARAM = true;
     Nd_phi = in_float;
+  }
+  if (in_string.equals("ki_phi")) {
+    FLAG_VALID_INP = true;
+    FLAG_SET_CONTROL_PARAM = true;
+    Ki_phi = in_float;
   }
   
   if(FLAG_SET_CONTROL_PARAM == true)
@@ -718,18 +719,30 @@ void updateControlParams() {
 
 void executePDController()
 {
+  float Ts = 0.02;
   float zhi_ref = 0;
   float zhi = pose[0];
   
-  e_zhi = zhi_ref - zhi;
-  float U4_p = Kp_zhi*e_zhi;
-  U4_d = 1/(1+Nd_zhi*0.02)*(U4_d + Kd_zhi*Nd_zhi*(e_zhi-e_zhi_prev));
-  e_zhi_prev = e_zhi;  
-  U4 = U4_p + U4_d;
+  float phi_ref = 0;
+  float phi = pose[2];
+  
+  //~ e_zhi = zhi_ref - zhi;
+  //~ float U4_p = Kp_zhi*e_zhi;
+  //~ U4_d = 1/(1+Nd_zhi*0.02)*(U4_d + Kd_zhi*Nd_zhi*(e_zhi-e_zhi_prev));
+  //~ e_zhi_prev = e_zhi;  
+  //~ U4 = U4_p + U4_d;
+  
+  e_phi = phi_ref - phi;
+  float U2_p = Kp_phi*e_phi;
+  float U2_d = Kd_phi/Ts*(e_phi - e_phi_prev);
+  e_phi_prev = e_phi;
+  float U2_i = U2_i + Ki_phi*Ts*e_phi;
+  U2 = U2_p + U2_d + U2_i;
   
   U1 = 0;
-  U2 = 0;
+  //~ U2 = 0;
   U3 = 0;
+  U4 = 0;
 }
 
 void getPWM() {
@@ -737,9 +750,9 @@ void getPWM() {
   if (USER_OVERRIDE == false) {
     int base_val_temp = 1200;
     motor_front_pwm = Kpwm/(4*d)*U4 + base_val_temp;
-    motor_left_pwm = -Kpwm/(4*d)*U4 + base_val_temp;
+    motor_left_pwm = -Kpwm/(4*d)*U4 + base_val_temp - Kpwm/(2*b_thrust*l)*Ixx*U2;
     motor_back_pwm = Kpwm/(4*d)*U4 + base_val_temp;
-    motor_right_pwm = -Kpwm/(4*d)*U4 + base_val_temp;
+    motor_right_pwm = -Kpwm/(4*d)*U4 + base_val_temp + Kpwm/(2*b_thrust*l)*Ixx*U2;
   }
   getInBounds();
 }
@@ -796,6 +809,8 @@ void showControlParams()
     Serial3.print(Kd_phi,3);
     Serial3.print(" ");
     Serial3.print(Nd_phi,3);
+    Serial3.print(" ");
+    Serial3.print(Ki_phi,3);
     Serial3.println();
 }
 
@@ -824,6 +839,7 @@ void readParamFromEEPROM()
   Kp_phi = params[6].val;
   Kd_phi = params[7].val;
   Nd_phi = params[8].val;
+  Ki_phi = params[9].val;
 }
 
 void writeParamToEEPROM()
@@ -841,6 +857,7 @@ void writeParamToEEPROM()
   params[6].val = Kp_phi;
   params[7].val = Kd_phi;
   params[8].val = Nd_phi;
+  params[9].val = Ki_phi;
   
   for(int i=0;i<CONTROLLER_PARAM_COUNT;i++)
   {

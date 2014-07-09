@@ -11,7 +11,7 @@
 #define MOTOR_PWM_MAX 1500
 
 #define CONTROLLER_PARAM_ADDRESS_START 72
-#define CONTROLLER_PARAM_COUNT 9
+#define CONTROLLER_PARAM_COUNT 10
 
 #define JOYSTICK_START '$'
 #define JOYSTICK_END ':'
@@ -30,6 +30,9 @@
 #define Kpwm Kpwm_rpm/((2*pi/60)*(2*pi/60))
 #define Cpwm = 842.4
 #define d 6.715e-7
+#define b_thrust 1.61e-5
+#define l 0.455/2
+#define Ixx 0.043675
 #define bzz 0.0628
 ///////////////////////////////////////////////////////////
 

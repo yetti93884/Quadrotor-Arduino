@@ -578,16 +578,20 @@ void startup_ground(void)
 void startup_air(void)
 {
   uint16_t temp=0;
-
+  float val = 0;
+  
   for(int y=0; y<=5; y++)
   {
     eeprom_busy_wait();
     temp = eeprom_read_word((uint16_t *)	(y*2+2));
+    val = temp;
+    if(temp>20000)
+      val = temp - 65536;
     #if BOARD_VERSION < 3
     AN_OFFSET[y] = temp/100.f+200.f;
     #endif
     #if BOARD_VERSION == 3
-    AN_OFFSET[y] = temp;
+    AN_OFFSET[y] = val;
     #endif	
     Serial.println(AN_OFFSET[y]);
   }

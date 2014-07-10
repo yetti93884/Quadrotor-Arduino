@@ -11,7 +11,7 @@
 #define MOTOR_PWM_MAX 1500
 
 #define CONTROLLER_PARAM_ADDRESS_START 72
-#define CONTROLLER_PARAM_COUNT 10
+#define CONTROLLER_PARAM_COUNT 11
 
 #define JOYSTICK_START '$'
 #define JOYSTICK_END ':'
@@ -36,6 +36,7 @@
 #define bzz 0.0628
 ///////////////////////////////////////////////////////////
 
+#define Ts 0.02
 
 /* set the settings for the IMU here*/
 void initializeIMU();

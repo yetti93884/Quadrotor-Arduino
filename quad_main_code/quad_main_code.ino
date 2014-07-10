@@ -77,7 +77,7 @@ void loop() {
     //  printJoyStickInput();                
     //  printIMUReadings();
     //  printMotorPWM();
-    Serial.println(delT);
+    Serial.println(U2);
   }
 }
 

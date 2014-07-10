@@ -87,6 +87,9 @@ float position_dt = 0.0;
 ///////////////Control Parameters//////////////////////////
 float pose[3] = {0.0, 0.0, 0.0}; // yaw pitch roll
 float angularrates[3] = {0.0, 0.0, 0.0};  //yaw_dot, pitch_dot, roll_dot
+float angularrates_filt[3] = {0.0, 0.0, 0.0};  //yaw_dot, pitch_dot, roll_dot
+float angularrates_filt_prev[3] = {0.0, 0.0, 0.0};  //yaw_dot, pitch_dot, roll_dot
+
 float pose_setpoints[3] = {0.0, 0.0, 0.0};  // yaw_set, pitch_set, roll_set
 float position_setpoints[3] = {0.0, 0.0, 0.0};  //x,y,z
 float quad_position[3];        //x,y,z
@@ -107,6 +110,8 @@ float Kp_phi;
 float Kd_phi;
 float Nd_phi;
 float Ki_phi;
+float C_phi;
+float U2_i = 0;
 
 float e_zhi;
 float e_zhi_prev;
@@ -419,6 +424,11 @@ void parseMessage()
     FLAG_SET_CONTROL_PARAM = true;
     Ki_phi = in_float;
   }
+  if (in_string.equals("c_phi")) {
+    FLAG_VALID_INP = true;
+    FLAG_SET_CONTROL_PARAM = true;
+    C_phi = in_float;
+  }
   
   if(FLAG_SET_CONTROL_PARAM == true)
   {
@@ -587,8 +597,9 @@ void parseIMUInput()
   }
   
   quaternionToEuler(quaternion, q_Euler);
-  pose_dt = (millis() - last_pose_update)/1000.0;
-  last_pose_update = millis();
+  pose_dt = 0.02;
+//  pose_dt = (millis() - last_pose_update)/1000.0;
+//  last_pose_update = millis();
     
 }
 
@@ -695,15 +706,19 @@ void initializeMotors() {
 
 void updateControlParams() {
   
+  float N = Nd_phi; //#TODO remove nd_phi and make it a new variable
   if (FLAG_IMU_PACKET_END == true) {
     angularrates[0] = (q_Euler[0] - pose[0])/pose_dt;
     pose[0] = q_Euler[0];
+    angularrates_filt[0] = angularrates_filt[0]/(1+N*Ts) + angularrates[0]*(N*Ts)/(1+N*Ts);
     
     angularrates[1] = (q_Euler[1] - pose[1])/pose_dt;
     pose[1] = q_Euler[1];
+    angularrates_filt[1] = angularrates_filt[1]/(1+N*Ts) + angularrates[1]*(N*Ts)/(1+N*Ts);
     
     angularrates[2] = (q_Euler[2] - pose[2])/pose_dt;
     pose[2] = q_Euler[2];
+    angularrates_filt[2] = angularrates_filt[2]/(1+N*Ts) + angularrates[2]*(N*Ts)/(1+N*Ts);
     
     FLAG_IMU_PACKET_END = false;
   }
@@ -719,12 +734,11 @@ void updateControlParams() {
 
 void executePDController()
 {
-  float Ts = 0.02;
   float zhi_ref = 0;
   float zhi = pose[0];
   
   float phi_ref = 0;
-  float phi = pose[2];
+  float phi = pose[1];
   
   //~ e_zhi = zhi_ref - zhi;
   //~ float U4_p = Kp_zhi*e_zhi;
@@ -734,13 +748,13 @@ void executePDController()
   
   e_phi = phi_ref - phi;
   float U2_p = Kp_phi*e_phi;
-  float U2_d = Kd_phi/Ts*(e_phi - e_phi_prev);
-  e_phi_prev = e_phi;
-  float U2_i = U2_i + Ki_phi*Ts*e_phi;
+  float U2_d = Kd_phi*(0 - angularrates_filt[1]);
+
+  U2_i = U2_i + Ki_phi*Ts*e_phi;
   U2 = U2_p + U2_d + U2_i;
   
   U1 = 0;
-  //~ U2 = 0;
+//  U2 = 0;
   U3 = 0;
   U4 = 0;
 }
@@ -748,11 +762,11 @@ void executePDController()
 void getPWM() {
   
   if (USER_OVERRIDE == false) {
-    int base_val_temp = 1200;
-    motor_front_pwm = Kpwm/(4*d)*U4 + base_val_temp;
-    motor_left_pwm = -Kpwm/(4*d)*U4 + base_val_temp - Kpwm/(2*b_thrust*l)*Ixx*U2;
-    motor_back_pwm = Kpwm/(4*d)*U4 + base_val_temp;
-    motor_right_pwm = -Kpwm/(4*d)*U4 + base_val_temp + Kpwm/(2*b_thrust*l)*Ixx*U2;
+    int base_val_temp = 1000;
+    motor_front_pwm = Kpwm/(4*d)*U4 + base_val_temp + Kpwm/(2*b_thrust*l)*Ixx*U2 - C_phi;
+    motor_left_pwm = -Kpwm/(4*d)*U4 + base_val_temp ;
+    motor_back_pwm = Kpwm/(4*d)*U4 + base_val_temp - Kpwm/(2*b_thrust*l)*Ixx*U2 + C_phi;
+    motor_right_pwm = -Kpwm/(4*d)*U4 + base_val_temp ;
   }
   getInBounds();
 }
@@ -811,6 +825,8 @@ void showControlParams()
     Serial3.print(Nd_phi,3);
     Serial3.print(" ");
     Serial3.print(Ki_phi,3);
+    Serial3.print(" ");
+    Serial3.print(C_phi,3);
     Serial3.println();
 }
 
@@ -840,6 +856,7 @@ void readParamFromEEPROM()
   Kd_phi = params[7].val;
   Nd_phi = params[8].val;
   Ki_phi = params[9].val;
+  C_phi = params[10].val;
 }
 
 void writeParamToEEPROM()
@@ -858,6 +875,7 @@ void writeParamToEEPROM()
   params[7].val = Kd_phi;
   params[8].val = Nd_phi;
   params[9].val = Ki_phi;
+  params[10].val = C_phi;
   
   for(int i=0;i<CONTROLLER_PARAM_COUNT;i++)
   {

@@ -56,7 +56,7 @@ void MPU6000_Init(void)
     MPU6000_SPI_write(MPUREG_SMPLRT_DIV,19);     // Sample rate = 50Hz    Fsample= 1Khz/(19+1) = 50Hz     
     delay(1);
     // FS & DLPF   FS=2000º/s, DLPF = 20Hz (low pass filter)
-    MPU6000_SPI_write(MPUREG_CONFIG, BITS_DLPF_CFG_20HZ);  
+    MPU6000_SPI_write(MPUREG_CONFIG, BITS_DLPF_CFG_5HZ);  
     delay(1);
     MPU6000_SPI_write(MPUREG_GYRO_CONFIG,BITS_FS_2000DPS);  // Gyro scale 2000º/s
     delay(1);

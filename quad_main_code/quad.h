@@ -126,7 +126,7 @@ float U3_i = 0;
 float U4_i = 0;
 //////////////////////////////////////////////////////////
 /////////////Physical Parameters//////////////////////////
-float m = 1.1;
+float m = 0.6;
 float g = 9.8;
 
 float Iyy = 0.043675;//0.0085;
@@ -236,6 +236,8 @@ void parseSerialInput()
           Serial3.println("CONTROL RESTART FOR MOTORS");
           USER_OVERRIDE = false;
           U2_i = 0;
+          U3_i = 0;
+          U4_i = 0;
           //updateMotors();
        }
    }
@@ -427,7 +429,7 @@ void parseMessage()
     FLAG_VALID_INP = true;
     pose_setpoints[1] = 0;
     pose_setpoints[2] = 0;
-    m = 0;
+    m = 0.6;
   }
   
   if(FLAG_SET_CONTROL_PARAM == true)
@@ -782,7 +784,7 @@ void executePDController()
   U2 = U2_p + U2_d + U2_i;
   //////////////////////////////////////////
   
-//  U1 = 0;
+  U1 = 5;
 //  U2 = 0;
 //  U3 = 0;
 //  U4 = 0;
@@ -819,20 +821,20 @@ void sendDataMRF(int del_t)                                              //sends
   Serial3.print(q_Euler[2],3);    //sending roll
   Serial3.print(',');
   
-  Serial3.print(U1);
-  Serial3.print(',');
-  Serial3.print(U2);  
-  Serial3.print(',');
-  Serial3.print(U3);
-  Serial3.print(',');
-  Serial3.print(U4);
-//  Serial3.print(motor_front_pwm);    //sending front PWM
+//  Serial3.print(U1);
 //  Serial3.print(',');
-//  Serial3.print(motor_left_pwm);    //sending left PWM  
+//  Serial3.print(U2);  
 //  Serial3.print(',');
-//  Serial3.print(motor_back_pwm);    //sending back PWM
+//  Serial3.print(U3);
 //  Serial3.print(',');
-//  Serial3.print(motor_right_pwm);    //sending right PWM
+//  Serial3.print(U4);
+  Serial3.print(motor_front_pwm);    //sending front PWM
+  Serial3.print(',');
+  Serial3.print(motor_left_pwm);    //sending left PWM  
+  Serial3.print(',');
+  Serial3.print(motor_back_pwm);    //sending back PWM
+  Serial3.print(',');
+  Serial3.print(motor_right_pwm);    //sending right PWM
 //    
   Serial3.println('|');
 }

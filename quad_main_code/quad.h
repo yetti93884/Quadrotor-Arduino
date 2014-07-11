@@ -232,6 +232,7 @@ void parseSerialInput()
        {
           Serial3.println("CONTROL RESTART FOR MOTORS");
           USER_OVERRIDE = false;
+          U2_i = 0;
           
           //updateMotors();
        }
@@ -737,7 +738,7 @@ void executePDController()
   float zhi_ref = 0;
   float zhi = pose[0];
   
-  float phi_ref = 0;
+  float phi_ref = 1-C_phi;
   float phi = pose[1];
   
   //~ e_zhi = zhi_ref - zhi;
@@ -748,8 +749,8 @@ void executePDController()
   
   e_phi = phi_ref - phi;
   float U2_p = Kp_phi*e_phi;
-  float U2_d = Kd_phi*(0 - angularrates_filt[1]);
-
+  float U2_d = Kd_phi/Ts*(e_phi - e_phi_prev);
+  e_phi_prev = e_phi;
   U2_i = U2_i + Ki_phi*Ts*e_phi;
   U2 = U2_p + U2_d + U2_i;
   
@@ -762,7 +763,7 @@ void executePDController()
 void getPWM() {
   
   if (USER_OVERRIDE == false) {
-    int base_val_temp = 1000;
+    int base_val_temp = 1150;
     motor_front_pwm = Kpwm/(4*d)*U4 + base_val_temp + Kpwm/(2*b_thrust*l)*Ixx*U2 - C_phi;
     motor_left_pwm = -Kpwm/(4*d)*U4 + base_val_temp ;
     motor_back_pwm = Kpwm/(4*d)*U4 + base_val_temp - Kpwm/(2*b_thrust*l)*Ixx*U2 + C_phi;

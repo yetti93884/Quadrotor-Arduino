@@ -70,7 +70,7 @@ int motor_back_pwm;
 
 float thrust_pwm_constant = 1.846/4;    // Thrust = 1.846*(pwm - 819.6)
 float torque_pwm_constant = 1.858;  // scaled by 10**4
-int thrust_pwm_min = (int)900;  //900 is good
+int thrust_pwm_min = (int)841.2;  //900 is good
 int torque_pwm_min = (int)1144.24;
 
 /////////////////////////////////////////////////////////// 
@@ -100,18 +100,16 @@ float speeds[4];
 ////////////////PD Controller implementation////////////////
 float Kp_zhi;
 float Kd_zhi;
-float Nd_zhi;
+float Ki_zhi;
 
 float Kp_theta;
 float Kd_theta;
-float Nd_theta;
+float Ki_theta;
 
 float Kp_phi;
 float Kd_phi;
-float Nd_phi;
 float Ki_phi;
 float C_phi;
-float U2_i = 0;
 
 float e_zhi;
 float e_zhi_prev;
@@ -123,6 +121,9 @@ float e_phi;
 float e_phi_prev;
 
 float U1, U2, U3, U4;
+float U2_i = 0;
+float U3_i = 0;
+float U4_i = 0;
 //////////////////////////////////////////////////////////
 /////////////Physical Parameters//////////////////////////
 float m = 1.1;
@@ -223,6 +224,7 @@ void parseSerialInput()
         parseMessage();
      else if(in_char == EMERGENCY_STOP)
         {
+          Serial.println("EMERGENCY STOP FOR MOTORS");
           Serial3.println("EMERGENCY STOP FOR MOTORS");
           USER_OVERRIDE = true;
           FLAG_SEND_DATA = false;
@@ -230,10 +232,10 @@ void parseSerialInput()
         }
      else if(in_char == CONTROL_RESTART)
        {
+         Serial.println("CONTROL RESTART FOR MOTORS");
           Serial3.println("CONTROL RESTART FOR MOTORS");
           USER_OVERRIDE = false;
           U2_i = 0;
-          
           //updateMotors();
        }
    }
@@ -379,10 +381,10 @@ void parseMessage()
     Kd_zhi = in_float;
   }
   
-  if (in_string.equals("nd_zhi")) {
+  if (in_string.equals("ki_zhi")) {
     FLAG_VALID_INP = true;
     FLAG_SET_CONTROL_PARAM = true;
-    Nd_zhi = in_float;
+    Ki_zhi = in_float;
   }
   
   if (in_string.equals("kp_theta")) {
@@ -397,10 +399,10 @@ void parseMessage()
     Kd_theta = in_float;
   }
   
-  if (in_string.equals("nd_theta")) {
+  if (in_string.equals("ki_theta")) {
     FLAG_VALID_INP = true;
     FLAG_SET_CONTROL_PARAM = true;
-    Nd_theta = in_float;
+    Ki_theta = in_float;
   }
   
   if (in_string.equals("kp_phi")) {
@@ -415,20 +417,17 @@ void parseMessage()
     Kd_phi = in_float;
   }
   
-  if (in_string.equals("nd_phi")) {
-    FLAG_VALID_INP = true;
-    FLAG_SET_CONTROL_PARAM = true;
-    Nd_phi = in_float;
-  }
   if (in_string.equals("ki_phi")) {
     FLAG_VALID_INP = true;
     FLAG_SET_CONTROL_PARAM = true;
     Ki_phi = in_float;
   }
-  if (in_string.equals("c_phi")) {
+  
+  if (in_string.equals("reset")) {
     FLAG_VALID_INP = true;
-    FLAG_SET_CONTROL_PARAM = true;
-    C_phi = in_float;
+    pose_setpoints[1] = 0;
+    pose_setpoints[2] = 0;
+    m = 0;
   }
   
   if(FLAG_SET_CONTROL_PARAM == true)
@@ -484,16 +483,13 @@ void parseMessage()
 }
 
 void parseJoyStickInput()
-{  
-  
+{ 
   in_string = "";
   boolean FLAG_INPUT_PACKET_END = false;
-  
-  
-  while(FLAG_INPUT_PACKET_END == false) {
-      
+  delay(4);
+  int count = 0;
+  while(count<27) {
       joystick_bla = Serial3.read();
-      
       
       if (joystick_bla == ',') {
         j_index = j_index + 1;
@@ -521,7 +517,8 @@ void parseJoyStickInput()
          }
        }
             
-    }
+      }
+      count++;
   }
   if(FLAG_INPUT_PACKET_END == true)
   {
@@ -535,8 +532,14 @@ void parseJoyStickInput()
     
     for(int i=0;i<FLOAT_SIZE;i++)
         command_thrust.inp[i] = joystick[2][2*i]*16 + joystick[2][2*i+1];
+    
+    if(command_roll.val <= 1 && command_roll.val >= -1)
+      pose_setpoints[2] = command_roll.val;
+    if(command_pitch.val <= 1 && command_pitch.val >= -1)      
+      pose_setpoints[1] = command_pitch.val;
+    if(command_thrust.val <= 1 && command_thrust.val >= -1)
+      m = command_thrust.val;
   }  
-  throttleToMotor();
 }
 
 void parseIMUInput()
@@ -707,19 +710,15 @@ void initializeMotors() {
 
 void updateControlParams() {
   
-  float N = Nd_phi; //#TODO remove nd_phi and make it a new variable
   if (FLAG_IMU_PACKET_END == true) {
     angularrates[0] = (q_Euler[0] - pose[0])/pose_dt;
     pose[0] = q_Euler[0];
-    angularrates_filt[0] = angularrates_filt[0]/(1+N*Ts) + angularrates[0]*(N*Ts)/(1+N*Ts);
     
     angularrates[1] = (q_Euler[1] - pose[1])/pose_dt;
     pose[1] = q_Euler[1];
-    angularrates_filt[1] = angularrates_filt[1]/(1+N*Ts) + angularrates[1]*(N*Ts)/(1+N*Ts);
     
     angularrates[2] = (q_Euler[2] - pose[2])/pose_dt;
     pose[2] = q_Euler[2];
-    angularrates_filt[2] = angularrates_filt[2]/(1+N*Ts) + angularrates[2]*(N*Ts)/(1+N*Ts);
     
     FLAG_IMU_PACKET_END = false;
   }
@@ -735,39 +734,65 @@ void updateControlParams() {
 
 void executePDController()
 {
-  float zhi_ref = 0;
+  float zhi_ref = pose_setpoints[0];
   float zhi = pose[0];
   
-  float phi_ref = 1-C_phi;
-  float phi = pose[1];
+  float theta_ref = pose_setpoints[1];
+  float theta = pose[1];
   
-  //~ e_zhi = zhi_ref - zhi;
-  //~ float U4_p = Kp_zhi*e_zhi;
-  //~ U4_d = 1/(1+Nd_zhi*0.02)*(U4_d + Kd_zhi*Nd_zhi*(e_zhi-e_zhi_prev));
-  //~ e_zhi_prev = e_zhi;  
-  //~ U4 = U4_p + U4_d;
+  float phi_ref = pose_setpoints[2];
+  float phi = pose[2];
   
+  /////////Computing U1 ////////////////////
+  U1 = m*g/(cos(theta)*cos(phi));
+  //////////////////////////////////////////
+  
+  ////////PID on zhi////////////////////////
+  e_zhi = zhi_ref - zhi;
+  float U4_p = Kp_zhi*e_zhi;
+  float U4_d = Kd_zhi/Ts*(e_zhi - e_zhi_prev);
+  e_zhi_prev = e_zhi;
+  U4_i = U4_i + Ki_zhi*Ts*e_zhi;
+  U4 = U4_p + U4_d + U4_i;
+  //////////////////////////////////////////
+  
+  ////////PID on theta////////////////////////
+  e_theta = theta_ref - theta;
+  float U3_p = Kp_theta*e_theta;
+  float U3_d = Kd_theta/Ts*(e_theta - e_theta_prev);
+  e_theta_prev = e_theta;
+  U3_i = U3_i + Ki_theta*Ts*e_theta;
+  U3 = U3_p + U3_d + U3_i;
+  //////////////////////////////////////////
+  
+  ////////PID on phi////////////////////////
   e_phi = phi_ref - phi;
   float U2_p = Kp_phi*e_phi;
   float U2_d = Kd_phi/Ts*(e_phi - e_phi_prev);
   e_phi_prev = e_phi;
   U2_i = U2_i + Ki_phi*Ts*e_phi;
   U2 = U2_p + U2_d + U2_i;
+  //////////////////////////////////////////
   
-  U1 = 0;
+//  U1 = 0;
 //  U2 = 0;
-  U3 = 0;
-  U4 = 0;
+//  U3 = 0;
+//  U4 = 0;
 }
 
 void getPWM() {
   
   if (USER_OVERRIDE == false) {
-    int base_val_temp = 1150;
-    motor_front_pwm = Kpwm/(4*d)*U4 + base_val_temp + Kpwm/(2*b_thrust*l)*Ixx*U2 - C_phi;
-    motor_left_pwm = -Kpwm/(4*d)*U4 + base_val_temp ;
-    motor_back_pwm = Kpwm/(4*d)*U4 + base_val_temp - Kpwm/(2*b_thrust*l)*Ixx*U2 + C_phi;
-    motor_right_pwm = -Kpwm/(4*d)*U4 + base_val_temp ;
+    float omega2_front, omega2_left, omega2_back, omega2_right;
+    omega2_front = U1/(4*b_thrust) + U4/(4*d) + U3/(2*b_thrust*l)*Ixx ;
+    omega2_left  = U1/(4*b_thrust) - U4/(4*d) - U2/(2*b_thrust*l)*Ixx ;
+    omega2_back  = U1/(4*b_thrust) + U4/(4*d) - U3/(2*b_thrust*l)*Ixx ;
+    omega2_right = U1/(4*b_thrust) - U4/(4*d) + U2/(2*b_thrust*l)*Ixx ;
+    
+    motor_front_pwm = Kpwm*omega2_front + thrust_pwm_min;
+    motor_left_pwm  = Kpwm*omega2_left  + thrust_pwm_min;
+    motor_back_pwm  = Kpwm*omega2_back  + thrust_pwm_min;
+    motor_right_pwm = Kpwm*omega2_right + thrust_pwm_min;
   }
   getInBounds();
 }
@@ -811,23 +836,19 @@ void showControlParams()
     Serial3.print(" ");
     Serial3.print(Kd_zhi,3);
     Serial3.print(" ");
-    Serial3.print(Nd_zhi,3);
+    Serial3.print(Ki_zhi,3);
     Serial3.print(" ");
     Serial3.print(Kp_theta,3);
     Serial3.print(" ");
     Serial3.print(Kd_theta,3);
     Serial3.print(" ");
-    Serial3.print(Nd_theta,3);
+    Serial3.print(Ki_theta,3);
     Serial3.print(" ");
     Serial3.print(Kp_phi,3);
     Serial3.print(" ");
     Serial3.print(Kd_phi,3);
     Serial3.print(" ");
-    Serial3.print(Nd_phi,3);
-    Serial3.print(" ");
     Serial3.print(Ki_phi,3);
-    Serial3.print(" ");
-    Serial3.print(C_phi,3);
     Serial3.println();
 }
 
@@ -849,15 +870,14 @@ void readParamFromEEPROM()
   
   Kp_zhi = params[0].val;
   Kd_zhi = params[1].val;
-  Nd_zhi = params[2].val;
+  Ki_zhi = params[2].val;
   Kp_theta = params[3].val;
   Kd_theta = params[4].val;
-  Nd_theta = params[5].val;
+  Ki_theta = params[5].val;
   Kp_phi = params[6].val;
   Kd_phi = params[7].val;
-  Nd_phi = params[8].val;
-  Ki_phi = params[9].val;
-  C_phi = params[10].val;
+  Ki_phi = params[8].val;
+  
 }
 
 void writeParamToEEPROM()
@@ -868,15 +888,13 @@ void writeParamToEEPROM()
 
   params[0].val = Kp_zhi;
   params[1].val = Kd_zhi;
-  params[2].val = Nd_zhi;
+  params[2].val = Ki_zhi;
   params[3].val = Kp_theta;
   params[4].val = Kd_theta;
-  params[5].val = Nd_theta;
+  params[5].val = Ki_theta;
   params[6].val = Kp_phi;
   params[7].val = Kd_phi;
-  params[8].val = Nd_phi;
-  params[9].val = Ki_phi;
-  params[10].val = C_phi;
+  params[8].val = Ki_phi;
   
   for(int i=0;i<CONTROLLER_PARAM_COUNT;i++)
   {

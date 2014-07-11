@@ -19,10 +19,14 @@ int delT;
 
 
 void setup() {
+  
+  
   Serial.begin(57600);  // lappy
   Serial2.begin(115200);  // imu
   Serial3.begin(57600);  // xbee
   Wire.begin();
+  
+  Serial.println("\n\nSTARTING up ");
   
   delay(5);
   //delay(5000);
@@ -77,7 +81,13 @@ void loop() {
     //  printJoyStickInput();                
     //  printIMUReadings();
     //  printMotorPWM();
-    Serial.println(U2);
+    Serial.print(pose_setpoints[1]);
+    Serial.print(", ");
+    Serial.print(pose_setpoints[2]);
+    Serial.print(", ");
+    Serial.print(m);
+    Serial.print(" ");
+    Serial.println(delT);
   }
 }
 

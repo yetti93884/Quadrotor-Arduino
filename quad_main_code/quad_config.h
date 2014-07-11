@@ -24,6 +24,8 @@
 
 #define VERSION "v0.3"
 
+#define REF_FILTER_COEFF 0.03
+
 #define pi 3.142
 /////////////Experimental Parameters //////////////////////
 #define Kpwm_rpm 3.896e-5

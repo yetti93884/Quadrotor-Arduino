@@ -44,22 +44,13 @@ void setup() {
 void loop() {
   timeNow = millis();
   delT = timeNow-timeOld;
-  
-  if (Serial3.available() > 0) {                              // Joystick reading available
-    parseSerialInput();
-  }
-  
-  
-  if (Serial2.available() > 0) {                              // IMU reading available
-    parseIMUInput();
-  }
 
   if (Serial.available() > 0) {                               // Instructions from lappy
     setIMUoffset();
   }
   
   if(delT >= 20)                                //main control loop runs at 50Hz
-  {
+  {  
     timeOld = timeNow;
     if(USER_OVERRIDE == false)
     {
@@ -81,6 +72,14 @@ void loop() {
     //  printJoyStickInput();                
     //  printIMUReadings();
     //  printMotorPWM();
+    if (Serial3.available() > 0) {                              // Joystick reading available
+      parseSerialInput();
+    }
+    if (Serial2.available() > 0) {                              // IMU reading available
+      parseIMUInput();
+    }
+    Serial.print(pose_setpoints[0]);
+    Serial.print(", ");
     Serial.print(pose_setpoints[1]);
     Serial.print(", ");
     Serial.print(pose_setpoints[2]);

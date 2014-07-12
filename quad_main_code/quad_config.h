@@ -8,9 +8,9 @@
 
 #define MOTOR_PWM_MIN 900
 #define MOTOR_ARM_PWM 800
-#define MOTOR_PWM_MAX 1600
+#define MOTOR_PWM_MAX 1100
 
-#define CONTROLLER_PARAM_ADDRESS_START 72
+#define CONTROLLER_PARAM_ADDRESS_START 150
 #define CONTROLLER_PARAM_COUNT 9
 
 #define JOYSTICK_START '$'
@@ -24,7 +24,7 @@
 
 #define VERSION "v0.3"
 
-#define REF_FILTER_COEFF 0.03
+#define REF_FILTER_COEFF 0.08
 
 #define pi 3.142
 /////////////Experimental Parameters //////////////////////

@@ -13,11 +13,6 @@ boolean FLAG_SEND_DATA = false;   // turns on sending data in MRF format
 
 /////////// Joystick variables /////////////////////////////
 
-char joystick[4][10];
-char joystick_bla;
-
-int index1;
-int j_index = 0;
 
 #define FLOAT_SIZE 4
 #define INT_SIZE 4
@@ -28,7 +23,7 @@ union float_num
   float val;
 }u;
  
-float_num command_yaw,command_pitch,command_roll,command_thrust;
+float command_yaw,command_pitch,command_roll,command_thrust;
  
 ////////////////////////////////////////////////////////////
 union int_num
@@ -174,7 +169,6 @@ void getInBounds() {
     }
 }
 void updateMotors() {
-    
     motor_front.writeMicroseconds(motor_front_pwm);
     motor_right.writeMicroseconds(motor_right_pwm);
     motor_left.writeMicroseconds(motor_left_pwm);
@@ -200,8 +194,8 @@ void stopMotors() {
 
 void throttleToMotor() {
   int pwm_val = 0;
-  if(command_pitch.val>0 && command_pitch.val<1)
-    pwm_val = MOTOR_PWM_MIN + (command_pitch.val)*(MOTOR_PWM_MAX-MOTOR_PWM_MIN);  
+  if(command_pitch>0 && command_pitch<1)
+    pwm_val = MOTOR_PWM_MIN + (command_pitch)*(MOTOR_PWM_MAX-MOTOR_PWM_MIN);  
   else
     pwm_val = MOTOR_PWM_MIN;
     
@@ -469,6 +463,12 @@ void parseMessage()
   }
   /////////////////////////////////////////////////////
   
+  if(USER_OVERRIDE == true && FLAG_VALID_INP == true)
+  {
+    getInBounds();
+    updateMotors();
+  }
+  
   ////////////PRINTING MOTOR STATES////////////////////
   Serial3.print(" Motor PWM : front- ");
   Serial3.print(motor_front_pwm);
@@ -486,70 +486,60 @@ void parseMessage()
 
 void parseJoyStickInput()
 { 
+  float joystick[4] = { 0.0,0.0,0.0,0.0};
+  char joystick_bla;
+
+  int j_index = 0;
+  int num_sign = 1;
+
   in_string = "";
   boolean FLAG_INPUT_PACKET_END = false;
   delay(4);
   int count = 0;
-  while(count<36) {
+  while(count<20) {
       joystick_bla = Serial3.read();
-      
+
       if (joystick_bla == ',') {
+        joystick[j_index] *= num_sign;
         j_index = j_index + 1;
-        index1 = 0;
+        num_sign = 1;
       }
       else if (joystick_bla == ':') {
         FLAG_INPUT_PACKET_END = true;
-//        printJoyStickInput();
-        //FLAG_INPUT_PACKET_END = false;
         j_index = 0;
-        index1 = 0;
       }
       else {
-        if(joystick_bla>='A' && joystick_bla<='F')
-        {  
-          joystick[j_index][index1] = joystick_bla-'A'+10;
-          index1++;
-        }
-        else
-       {
-         if(joystick_bla>='0'&&joystick_bla<='9')
-         {
-           joystick[j_index][index1] = joystick_bla-'0';
-           index1++;
-         }
+        if(joystick_bla>='0' && joystick_bla<='9')
+          joystick[j_index] = joystick[j_index]*10 + joystick_bla - '0';
+        else if(joystick_bla == '-')
+          num_sign = -1;
        }
-            
-      }
+    
       count++;
   }
   if(FLAG_INPUT_PACKET_END == true)
   {
-    //FLAG_INPUT_PACKET_END = false;
-    for(int i=0;i<FLOAT_SIZE;i++)
-        command_yaw.inp[i] = joystick[0][2*i]*16 + joystick[0][2*i+1];
+    command_yaw = joystick[0]/100.0;
         
-    for(int i=0;i<FLOAT_SIZE;i++)
-        command_pitch.inp[i] = joystick[1][2*i]*16 + joystick[1][2*i+1];
+    command_pitch = joystick[1]/100.0;
         
-    for(int i=0;i<FLOAT_SIZE;i++)
-        command_roll.inp[i] = joystick[2][2*i]*16 + joystick[2][2*i+1];    
+    command_roll = joystick[2]/100.0;
     
-    for(int i=0;i<FLOAT_SIZE;i++)
-        command_thrust.inp[i] = joystick[3][2*i]*16 + joystick[3][2*i+1];
+    command_thrust = joystick[3]/100.0;
     
-    if(command_yaw.val <= 3.1 && command_yaw.val >= -3.1)      
-      pose_setpoints[0] = (1-REF_FILTER_COEFF)*pose_setpoints[0] + REF_FILTER_COEFF*command_yaw.val;
+    if(command_yaw <= 3.1 && command_yaw >= -3.1)      
+      pose_setpoints[0] = (1-REF_FILTER_COEFF)*pose_setpoints[0] + REF_FILTER_COEFF*command_yaw;
     
-    if(command_pitch.val <= 1 && command_pitch.val >= -1)      
-      pose_setpoints[1] = (1-REF_FILTER_COEFF)*pose_setpoints[1] + REF_FILTER_COEFF*command_pitch.val;
+    if(command_pitch <= 1 && command_pitch >= -1)      
+      pose_setpoints[1] = (1-REF_FILTER_COEFF)*pose_setpoints[1] + REF_FILTER_COEFF*command_pitch;
       
-    if(command_roll.val <= 1 && command_roll.val >= -1)
-      pose_setpoints[2] = (1-REF_FILTER_COEFF)*pose_setpoints[2] + REF_FILTER_COEFF*command_roll.val;
+    if(command_roll <= 1 && command_roll >= -1)
+      pose_setpoints[2] = (1-REF_FILTER_COEFF)*pose_setpoints[2] + REF_FILTER_COEFF*command_roll;
     
-    if(command_thrust.val <= 1.4 && command_thrust.val >= 0)
-      m = (1-REF_FILTER_COEFF)*m + REF_FILTER_COEFF*command_thrust.val;
+    if(command_thrust <= 1.4 && command_thrust >= 0)
+      m = (1-REF_FILTER_COEFF)*m + REF_FILTER_COEFF*command_thrust;
     
-  }  
+  }
 }
 
 void parseIMUInput()
@@ -620,13 +610,13 @@ void parseIMUInput()
 void printJoyStickInput()
 {
   Serial.print("Joy Inputs: ");
-  Serial.print(command_roll.val,4);
+  Serial.print(command_yaw,4);
   Serial.print(' ');
-  //Serial.print("Pitch Input: ");
-  Serial.print(command_pitch.val,4);
+  Serial.print(command_pitch,4);
   Serial.print(' ');
-  //Serial.print("Thrust Input: ");
-  Serial.print(command_thrust.val,4);
+  Serial.print(command_roll,4);
+  Serial.print(' ');
+  Serial.print(command_thrust,4);
   Serial.print("  |  ");
   
 }
@@ -784,7 +774,7 @@ void executePDController()
   U2 = U2_p + U2_d + U2_i;
   //////////////////////////////////////////
   
-  U1 = 5;
+  U1 = m*g;
 //  U2 = 0;
 //  U3 = 0;
 //  U4 = 0;
@@ -804,7 +794,6 @@ void getPWM() {
     motor_back_pwm  = Kpwm*omega2_back  + thrust_pwm_min;
     motor_right_pwm = Kpwm*omega2_right + thrust_pwm_min;
   }
-  getInBounds();
 }
 
 void sendDataMRF(int del_t)                                              //sends the IMU data and motor PWMs via 
